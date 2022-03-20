@@ -1,0 +1,7 @@
+{
+    "C_Cpp.errorSquiggles": "Enabled",
+    "files.associations": {
+        "ssd1306.h": "c",
+        "stm32f2xx_hal.h": "c"
+    }
+}
