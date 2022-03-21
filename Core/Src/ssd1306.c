@@ -112,7 +112,7 @@ void ssd1306_Init(void) {
 #endif
 
 // Set multiplex ratio.
-#if (SSD1306_HEIGHT == 128)
+#if (SSD1306_HEIGHT == 132)
     // Found in the Luma Python lib for SH1106.
     ssd1306_WriteCommand(0xFF);
 #else
@@ -123,7 +123,7 @@ void ssd1306_Init(void) {
     ssd1306_WriteCommand(0x1F); //
 #elif (SSD1306_HEIGHT == 64)
     ssd1306_WriteCommand(0x3F); //
-#elif (SSD1306_HEIGHT == 128)
+#elif (SSD1306_HEIGHT == 132)
     ssd1306_WriteCommand(0x3F); // Seems to work for 128px high displays too.
 #else
 #error "Only 32, 64, or 128 lines of height are supported!"
@@ -145,7 +145,7 @@ void ssd1306_Init(void) {
     ssd1306_WriteCommand(0x02);
 #elif (SSD1306_HEIGHT == 64)
     ssd1306_WriteCommand(0x12);
-#elif (SSD1306_HEIGHT == 128)
+#elif (SSD1306_HEIGHT == 132)
     ssd1306_WriteCommand(0x12);
 #else
 #error "Only 32, 64, or 128 lines of height are supported!"
@@ -357,9 +357,9 @@ void ssd1306_DrawArc(uint8_t x, uint8_t y, uint8_t radius, uint16_t start_angle,
     uint32_t count = 0;
     uint32_t loc_sweep = 0;
     float rad;
-    
+
     loc_sweep = ssd1306_NormalizeTo0_360(sweep);
-    
+
     count = (ssd1306_NormalizeTo0_360(start_angle) * CIRCLE_APPROXIMATION_SEGMENTS) / 360;
     approx_segments = (loc_sweep * CIRCLE_APPROXIMATION_SEGMENTS) / 360;
     approx_degree = loc_sweep / (float)approx_segments;

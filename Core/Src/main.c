@@ -21,9 +21,14 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include <stdio.h>
+#include <string.h>
+
 #include "ssd1306_fonts.h"
 #include "ssd1306_tests.h"
 #include "ssd1306.h"
+#include "MY_NRF24.h"
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -66,7 +71,9 @@ static void MX_USART3_UART_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
+uint64_t TxpipeAddrs = 0x11223344AA;
+char MyTxData[32] = "Hello Anh Quoc";
+char AckPayLoad[33];
 
 /* USER CODE END 0 */
 
@@ -103,10 +110,26 @@ int main(void)
   MX_SPI3_Init();
   MX_USART3_UART_Init();
   /* USER CODE BEGIN 2 */
-  ssd1306_Init();
-  ssd1306_DrawCircle(40, 40, 10, White);
-  ssd1306_UpdateScreen();
+  // ssd1306_Init();
+  // ssd1306_SetCursor(2,0);
+  // ssd1306_WriteString("Hello!!! Ahihi",Font_6x8, White);
+  // ssd1306_UpdateScreen();
+  NRF24_begin(GPIOC, RF_CS_Pin, GPIO_PIN_8, hspi3);
+  nrf24_DebugUART_Init(huart3);
 
+  //**** Transmit - ACK ****//
+  NRF24_stopListening();
+  NRF24_openWritingPipe(TxpipeAddrs);
+  NRF24_setAutoAck(true);
+  NRF24_setChannel(52);
+  NRF24_setPayloadSize(32);
+  NRF24_setDataRate(RF24_1MBPS);
+
+  NRF24_enableDynamicPayloads();
+  NRF24_enableAckPayload();
+  printRadioSettings();
+
+  char myDataack[80];
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -116,8 +139,16 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-    HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
-    HAL_Delay(1000);
+    if(NRF24_write(MyTxData, 32))
+		  {
+			  NRF24_read(AckPayLoad, 32);
+			  // sprintf(myDataack, "AckPayload:  %s \r\n", AckPayLoad);
+			  // HAL_UART_Transmit(&huart3, (uint8_t *)myDataack, strlen(myDataack), 100);
+        // memset(myDataack, '\0', 80);
+        // memset(AckPayLoad, '\0', 33);
+		  }
+		
+		HAL_Delay(1000);
   }
   /* USER CODE END 3 */
 }
@@ -268,7 +299,7 @@ static void MX_SPI3_Init(void)
   hspi3.Init.CLKPolarity = SPI_POLARITY_LOW;
   hspi3.Init.CLKPhase = SPI_PHASE_1EDGE;
   hspi3.Init.NSS = SPI_NSS_SOFT;
-  hspi3.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_2;
+  hspi3.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_32;
   hspi3.Init.FirstBit = SPI_FIRSTBIT_MSB;
   hspi3.Init.TIMode = SPI_TIMODE_DISABLE;
   hspi3.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
