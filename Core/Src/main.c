@@ -1,20 +1,20 @@
 /* USER CODE BEGIN Header */
 /**
-  ******************************************************************************
-  * @file           : main.c
-  * @brief          : Main program body
-  ******************************************************************************
-  * @attention
-  *
-  * Copyright (c) 2022 STMicroelectronics.
-  * All rights reserved.
-  *
-  * This software is licensed under terms that can be found in the LICENSE file
-  * in the root directory of this software component.
-  * If no LICENSE file comes with this software, it is provided AS-IS.
-  *
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file           : main.c
+ * @brief          : Main program body
+ ******************************************************************************
+ * @attention
+ *
+ * Copyright (c) 2022 STMicroelectronics.
+ * All rights reserved.
+ *
+ * This software is licensed under terms that can be found in the LICENSE file
+ * in the root directory of this software component.
+ * If no LICENSE file comes with this software, it is provided AS-IS.
+ *
+ ******************************************************************************
+ */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
@@ -24,10 +24,10 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "MY_NRF24.h"
+#include "ssd1306.h"
 #include "ssd1306_fonts.h"
 #include "ssd1306_tests.h"
-#include "ssd1306.h"
-#include "MY_NRF24.h"
 
 /* USER CODE END Includes */
 
@@ -110,46 +110,49 @@ int main(void)
   MX_SPI3_Init();
   MX_USART3_UART_Init();
   /* USER CODE BEGIN 2 */
-  // ssd1306_Init();
-  // ssd1306_SetCursor(2,0);
-  // ssd1306_WriteString("Hello!!! Ahihi",Font_6x8, White);
-  // ssd1306_UpdateScreen();
-  NRF24_begin(GPIOC, RF_CS_Pin, GPIO_PIN_8, hspi3);
-  nrf24_DebugUART_Init(huart3);
+  HAL_GPIO_WritePin(Buzz_GPIO_Port, Buzz_Pin, GPIO_PIN_RESET);
+    // ssd1306_Init();
+    // ssd1306_SetCursor(2,0);
+    // ssd1306_WriteString("Hello!!! Ahihi",Font_6x8, White);
+    // ssd1306_UpdateScreen();
+    NRF24_begin(RF_CS_GPIO_Port, RF_CS_Pin, RF_CE_Pin, hspi3);
+    nrf24_DebugUART_Init(huart3);
 
-  //**** Transmit - ACK ****//
-  NRF24_stopListening();
-  NRF24_openWritingPipe(TxpipeAddrs);
-  NRF24_setAutoAck(true);
-  NRF24_setChannel(52);
-  NRF24_setPayloadSize(32);
-  NRF24_setDataRate(RF24_1MBPS);
+    //**** Transmit - ACK ****//
+    NRF24_stopListening();
+    NRF24_openWritingPipe(TxpipeAddrs);
+    NRF24_setChannel(12);
+    NRF24_setAutoAck(true);
+    NRF24_setPayloadSize(32);
+    NRF24_setPALevel(RF24_PA_m6dB);
+    NRF24_setDataRate(RF24_2MBPS);
+    NRF24_setRetries(0x07, 15); //Delay 1250us and 15 times
+    NRF24_enableAckPayload();
+    NRF24_enableDynamicPayloads();
+    printRadioSettings();
 
-  NRF24_enableDynamicPayloads();
-  NRF24_enableAckPayload();
-  printRadioSettings();
-
-  char myDataack[80];
+    char myDataack[80];
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  while (1)
-  {
+    while (1) {
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-    if(NRF24_write(MyTxData, 32))
-		  {
-			  NRF24_read(AckPayLoad, 32);
-			  // sprintf(myDataack, "AckPayload:  %s \r\n", AckPayLoad);
-			  // HAL_UART_Transmit(&huart3, (uint8_t *)myDataack, strlen(myDataack), 100);
-        // memset(myDataack, '\0', 80);
-        // memset(AckPayLoad, '\0', 33);
-		  }
-		
-		HAL_Delay(1000);
-  }
+        if (NRF24_write(MyTxData, 32)) {
+            if (NRF24_isAckPayloadAvailable()) {
+                NRF24_read(AckPayLoad, 32);
+                sprintf(myDataack, "AckPayload:  %s \r\n", AckPayLoad);
+                HAL_UART_Transmit(&huart3, (uint8_t *)myDataack,
+                                  strlen(myDataack), 100);
+                memset(myDataack, '\0', 80);
+                memset(AckPayLoad, '\0', 33);
+            }
+            printf("Transmit successfully\r\n");
+        }
+        HAL_Delay(1000);
+    }
   /* USER CODE END 3 */
 }
 
@@ -169,9 +172,9 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.HSEState = RCC_HSE_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
-  RCC_OscInitStruct.PLL.PLLM = 8;
-  RCC_OscInitStruct.PLL.PLLN = 240;
-  RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
+  RCC_OscInitStruct.PLL.PLLM = 4;
+  RCC_OscInitStruct.PLL.PLLN = 216;
+  RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV6;
   RCC_OscInitStruct.PLL.PLLQ = 4;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
@@ -186,7 +189,7 @@ void SystemClock_Config(void)
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV4;
   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV2;
 
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_3) != HAL_OK)
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK)
   {
     Error_Handler();
   }
@@ -299,7 +302,7 @@ static void MX_SPI3_Init(void)
   hspi3.Init.CLKPolarity = SPI_POLARITY_LOW;
   hspi3.Init.CLKPhase = SPI_PHASE_1EDGE;
   hspi3.Init.NSS = SPI_NSS_SOFT;
-  hspi3.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_32;
+  hspi3.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_4;
   hspi3.Init.FirstBit = SPI_FIRSTBIT_MSB;
   hspi3.Init.TIMode = SPI_TIMODE_DISABLE;
   hspi3.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
@@ -407,7 +410,10 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-
+int _write(int file, char *outgoing, int len) {
+    HAL_UART_Transmit(&huart3, (uint8_t *)outgoing, len, 100);
+    return len;
+}
 /* USER CODE END 4 */
 
 /**
@@ -417,11 +423,11 @@ static void MX_GPIO_Init(void)
 void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
-  /* User can add his own implementation to report the HAL error return state */
-  __disable_irq();
-  while (1)
-  {
-  }
+    /* User can add his own implementation to report the HAL error return state
+     */
+    __disable_irq();
+    while (1) {
+    }
   /* USER CODE END Error_Handler_Debug */
 }
 
@@ -436,8 +442,9 @@ void Error_Handler(void)
 void assert_failed(uint8_t *file, uint32_t line)
 {
   /* USER CODE BEGIN 6 */
-  /* User can add his own implementation to report the file name and line number,
-     ex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
+    /* User can add his own implementation to report the file name and line
+       number, ex: printf("Wrong parameters value: file %s on line %d\r\n",
+       file, line) */
   /* USER CODE END 6 */
 }
 #endif /* USE_FULL_ASSERT */

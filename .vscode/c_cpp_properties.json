@@ -7,7 +7,9 @@
                 "${workspaceFolder}/Core/Inc",
                 "${workspaceFolder}/Drivers/STM32F2xx_HAL_Driver/Inc",
                 "${workspaceFolder}/Drivers/CMSIS/Device/ST/STM32F2xx/Include",
-                "${workspaceFolder}/Drivers/CMSIS/Core/Include"
+                "${workspaceFolder}/Drivers/CMSIS/Core/Include",
+                "${workspaceFolder}/Drivers/Radio/Inc",
+                "${workspaceFolder}/Drivers/OLED/Inc"
             ],
             "defines": [
                 "_DEBUG",

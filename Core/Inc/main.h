@@ -53,7 +53,7 @@ extern "C" {
 void Error_Handler(void);
 
 /* USER CODE BEGIN EFP */
-
+int _write(int file, char *outgoing, int len);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
@@ -85,10 +85,6 @@ void Error_Handler(void);
 #define BTN3_LCD_GPIO_Port GPIOC
 #define BTN_L_Ver_Pin GPIO_PIN_0
 #define BTN_L_Ver_GPIO_Port GPIOB
-#define MCU_TX_Pin GPIO_PIN_10
-#define MCU_TX_GPIO_Port GPIOB
-#define MCU_RX_Pin GPIO_PIN_11
-#define MCU_RX_GPIO_Port GPIOB
 #define LED_Pin GPIO_PIN_13
 #define LED_GPIO_Port GPIOB
 #define BTN4_LCD_Pin GPIO_PIN_6
