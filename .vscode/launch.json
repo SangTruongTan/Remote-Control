@@ -9,6 +9,7 @@
             "type": "cortex-debug",
             "servertype": "openocd",
             "device": "STM32F205VC",
+            // "serialNumber": "382F050232123853354B4E00", // if Multiple Debuggers attached
             "configFiles": [
                 "interface/stlink.cfg",
                 "target/stm32f2x.cfg"
