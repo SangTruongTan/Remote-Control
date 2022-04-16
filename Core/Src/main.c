@@ -24,11 +24,9 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "MY_NRF24.h"
-#include "ssd1306.h"
-#include "ssd1306_fonts.h"
-#include "ssd1306_tests.h"
-
+#include "Oled.h"
+#include "Radio.h"
+#include "uartRingBufDMA.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -46,34 +44,43 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
-ADC_HandleTypeDef hadc1;
+ADC_HandleTypeDef hadc2;
+DMA_HandleTypeDef hdma_adc2;
 
 I2C_HandleTypeDef hi2c1;
 
 SPI_HandleTypeDef hspi3;
 
 UART_HandleTypeDef huart3;
+DMA_HandleTypeDef hdma_usart3_rx;
+DMA_HandleTypeDef hdma_usart3_tx;
 
 /* USER CODE BEGIN PV */
 
+RingBuffer_t Ring;
+RadioHandler_t Radio;
+OLEDHandle_t Oled;
+
+uint16_t ADCValue[4];
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
-static void MX_ADC1_Init(void);
 static void MX_I2C1_Init(void);
 static void MX_SPI3_Init(void);
+static void MX_DMA_Init(void);
 static void MX_USART3_UART_Init(void);
+static void MX_ADC2_Init(void);
 /* USER CODE BEGIN PFP */
-
+void Init_Task(void *pvParameters);
+void Display_Task(void *pvParameters);
+void Radio_Task(void *pvParameters);
+void ReadData_Task(void *pvParameters);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-uint64_t TxpipeAddrs = 0x11223344AA;
-char MyTxData[32] = "Hello Anh Quoc";
-char AckPayLoad[33];
 
 /* USER CODE END 0 */
 
@@ -105,33 +112,39 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  MX_ADC1_Init();
   MX_I2C1_Init();
   MX_SPI3_Init();
+  MX_DMA_Init();
   MX_USART3_UART_Init();
+  MX_ADC2_Init();
   /* USER CODE BEGIN 2 */
-  HAL_GPIO_WritePin(Buzz_GPIO_Port, Buzz_Pin, GPIO_PIN_RESET);
-    // ssd1306_Init();
-    // ssd1306_SetCursor(2,0);
-    // ssd1306_WriteString("Hello!!! Ahihi",Font_6x8, White);
-    // ssd1306_UpdateScreen();
-    NRF24_begin(RF_CS_GPIO_Port, RF_CS_Pin, RF_CE_Pin, hspi3);
-    nrf24_DebugUART_Init(huart3);
-
-    //**** Transmit - ACK ****//
-    NRF24_stopListening();
-    NRF24_openWritingPipe(TxpipeAddrs);
-    NRF24_setChannel(12);
-    NRF24_setAutoAck(true);
-    NRF24_setPayloadSize(32);
-    NRF24_setPALevel(RF24_PA_m6dB);
-    NRF24_setDataRate(RF24_2MBPS);
-    NRF24_setRetries(0x07, 15); //Delay 1250us and 15 times
-    NRF24_enableAckPayload();
-    NRF24_enableDynamicPayloads();
-    printRadioSettings();
-
-    char myDataack[80];
+    // Init for ADC with DMA
+    HAL_ADC_Start_DMA(&hadc2, (uint32_t *)ADCValue, 4);
+    // Init for the Ring Buffer. Must be call before other application
+    Ring.Ring1.enable = true;
+    Ring.Ring1.hdma = &hdma_usart3_rx;
+    Ring.Ring1.huart = &huart3;
+    Ring.GetTime = HAL_GetTick;
+    Ring_Init(&Ring);
+    // Init for the Radio SubSystem
+    Radio.Init.Debug = &Ring.Ring1;
+    Radio.Init.enableDebug = true;
+    Radio.Init.nrfInit.CE_Pin = RF_CE_Pin;
+    Radio.Init.nrfInit.CSN_Pin = RF_CS_Pin;
+    Radio.Init.nrfInit.Port = RF_CS_GPIO_Port;
+    Radio.Init.nrfInit.getTick = HAL_GetTick;
+    Radio.Init.nrfInit.Timeout = 0;
+    Radio.Init.nrfInit.wait = HAL_Delay;
+    Radio.Init.nrfInit.hspi = &hspi3;
+    Radio.Init.Serial = &Ring.Ring1;
+    Radio.Init.Display = &Oled.Display;
+    Radio.Init.ADCValue = ADCValue;
+    Radio_Init(&Radio, Radio.Init);
+    // HAL_GPIO_WritePin(Buzz_GPIO_Port, Buzz_Pin, GPIO_PIN_SET);
+    // HAL_Delay(50);
+    Varires_Calib(&Radio.AdcOffset, ADCValue, 100);
+    HAL_GPIO_WritePin(Buzz_GPIO_Port, Buzz_Pin, GPIO_PIN_RESET);
+    uint8_t Buffer[100];
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -140,18 +153,14 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-        if (NRF24_write(MyTxData, 32)) {
-            if (NRF24_isAckPayloadAvailable()) {
-                NRF24_read(AckPayLoad, 32);
-                sprintf(myDataack, "AckPayload:  %s \r\n", AckPayLoad);
-                HAL_UART_Transmit(&huart3, (uint8_t *)myDataack,
-                                  strlen(myDataack), 100);
-                memset(myDataack, '\0', 80);
-                memset(AckPayLoad, '\0', 33);
-            }
-            printf("Transmit successfully\r\n");
-        }
-        HAL_Delay(1000);
+        uint32_t Start = HAL_GetTick();
+        Radio_Task(NULL);
+        sprintf((char *)Buffer, "ADC:Ch1,%d,Ch2,%d,Ch3,%d,Ch4,%d\r\n", Radio.PWMValue.Adc1,
+               Radio.PWMValue.Adc2, Radio.PWMValue.Adc3, Radio.PWMValue.Adc4);
+        HAL_UART_Transmit_DMA(&huart3, Buffer, strlen((char *)Buffer));
+        uint32_t Stop = HAL_GetTick();
+        printf("Time:%ld\r\n", Stop - Start);
+        HAL_Delay(20);
     }
   /* USER CODE END 3 */
 }
@@ -196,52 +205,76 @@ void SystemClock_Config(void)
 }
 
 /**
-  * @brief ADC1 Initialization Function
+  * @brief ADC2 Initialization Function
   * @param None
   * @retval None
   */
-static void MX_ADC1_Init(void)
+static void MX_ADC2_Init(void)
 {
 
-  /* USER CODE BEGIN ADC1_Init 0 */
+  /* USER CODE BEGIN ADC2_Init 0 */
 
-  /* USER CODE END ADC1_Init 0 */
+  /* USER CODE END ADC2_Init 0 */
 
   ADC_ChannelConfTypeDef sConfig = {0};
 
-  /* USER CODE BEGIN ADC1_Init 1 */
+  /* USER CODE BEGIN ADC2_Init 1 */
 
-  /* USER CODE END ADC1_Init 1 */
+  /* USER CODE END ADC2_Init 1 */
   /** Configure the global features of the ADC (Clock, Resolution, Data Alignment and number of conversion)
   */
-  hadc1.Instance = ADC1;
-  hadc1.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV2;
-  hadc1.Init.Resolution = ADC_RESOLUTION_12B;
-  hadc1.Init.ScanConvMode = DISABLE;
-  hadc1.Init.ContinuousConvMode = DISABLE;
-  hadc1.Init.DiscontinuousConvMode = DISABLE;
-  hadc1.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
-  hadc1.Init.ExternalTrigConv = ADC_SOFTWARE_START;
-  hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
-  hadc1.Init.NbrOfConversion = 1;
-  hadc1.Init.DMAContinuousRequests = DISABLE;
-  hadc1.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
-  if (HAL_ADC_Init(&hadc1) != HAL_OK)
+  hadc2.Instance = ADC2;
+  hadc2.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV2;
+  hadc2.Init.Resolution = ADC_RESOLUTION_12B;
+  hadc2.Init.ScanConvMode = ENABLE;
+  hadc2.Init.ContinuousConvMode = ENABLE;
+  hadc2.Init.DiscontinuousConvMode = DISABLE;
+  hadc2.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
+  hadc2.Init.ExternalTrigConv = ADC_SOFTWARE_START;
+  hadc2.Init.DataAlign = ADC_DATAALIGN_RIGHT;
+  hadc2.Init.NbrOfConversion = 4;
+  hadc2.Init.DMAContinuousRequests = ENABLE;
+  hadc2.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
+  if (HAL_ADC_Init(&hadc2) != HAL_OK)
   {
     Error_Handler();
   }
   /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
   */
-  sConfig.Channel = ADC_CHANNEL_1;
+  sConfig.Channel = ADC_CHANNEL_4;
   sConfig.Rank = 1;
-  sConfig.SamplingTime = ADC_SAMPLETIME_3CYCLES;
-  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+  sConfig.SamplingTime = ADC_SAMPLETIME_480CYCLES;
+  if (HAL_ADC_ConfigChannel(&hadc2, &sConfig) != HAL_OK)
   {
     Error_Handler();
   }
-  /* USER CODE BEGIN ADC1_Init 2 */
+  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
+  */
+  sConfig.Channel = ADC_CHANNEL_5;
+  sConfig.Rank = 2;
+  if (HAL_ADC_ConfigChannel(&hadc2, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
+  */
+  sConfig.Channel = ADC_CHANNEL_6;
+  sConfig.Rank = 3;
+  if (HAL_ADC_ConfigChannel(&hadc2, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
+  */
+  sConfig.Channel = ADC_CHANNEL_7;
+  sConfig.Rank = 4;
+  if (HAL_ADC_ConfigChannel(&hadc2, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN ADC2_Init 2 */
 
-  /* USER CODE END ADC1_Init 2 */
+  /* USER CODE END ADC2_Init 2 */
 
 }
 
@@ -261,7 +294,7 @@ static void MX_I2C1_Init(void)
 
   /* USER CODE END I2C1_Init 1 */
   hi2c1.Instance = I2C1;
-  hi2c1.Init.ClockSpeed = 100000;
+  hi2c1.Init.ClockSpeed = 400000;
   hi2c1.Init.DutyCycle = I2C_DUTYCYCLE_2;
   hi2c1.Init.OwnAddress1 = 0;
   hi2c1.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
@@ -302,7 +335,7 @@ static void MX_SPI3_Init(void)
   hspi3.Init.CLKPolarity = SPI_POLARITY_LOW;
   hspi3.Init.CLKPhase = SPI_PHASE_1EDGE;
   hspi3.Init.NSS = SPI_NSS_SOFT;
-  hspi3.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_4;
+  hspi3.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_8;
   hspi3.Init.FirstBit = SPI_FIRSTBIT_MSB;
   hspi3.Init.TIMode = SPI_TIMODE_DISABLE;
   hspi3.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
@@ -351,6 +384,29 @@ static void MX_USART3_UART_Init(void)
 }
 
 /**
+  * Enable DMA controller clock
+  */
+static void MX_DMA_Init(void)
+{
+
+  /* DMA controller clock enable */
+  __HAL_RCC_DMA1_CLK_ENABLE();
+  __HAL_RCC_DMA2_CLK_ENABLE();
+
+  /* DMA interrupt init */
+  /* DMA1_Stream1_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Stream1_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Stream1_IRQn);
+  /* DMA1_Stream3_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Stream3_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Stream3_IRQn);
+  /* DMA2_Stream3_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA2_Stream3_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(DMA2_Stream3_IRQn);
+
+}
+
+/**
   * @brief GPIO Initialization Function
   * @param None
   * @retval None
@@ -366,46 +422,60 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOC, AUX_TRIM_Pin|SW_Right_Pin|GEAR_Pin|BTN1_LCD_Pin
-                          |BTN2_LCD_Pin|BTN3_LCD_Pin|BTN4_LCD_Pin|ENC_BTN_Pin
-                          |RF_CE_Pin|RF_CS_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOB, LED_Pin|Buzz_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, BTN_L_Ver_Pin|LED_Pin|Buzz_Pin|FLAP_TRIM_Pin
-                          |FLAP_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOC, RF_CE_Pin|RF_CS_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, BTN_R_Hor_R_Pin|BTN_R_Hor_L_Pin|BTN_L_Hor_R_Pin|BTN_L_Hor_L_Pin
-                          |BTN_R_Ver_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(BTN_R_Ver_GPIO_Port, BTN_R_Ver_Pin, GPIO_PIN_RESET);
 
-  /*Configure GPIO pins : AUX_TRIM_Pin SW_Right_Pin GEAR_Pin BTN1_LCD_Pin
-                           BTN2_LCD_Pin BTN3_LCD_Pin BTN4_LCD_Pin ENC_BTN_Pin
-                           RF_CE_Pin RF_CS_Pin */
-  GPIO_InitStruct.Pin = AUX_TRIM_Pin|SW_Right_Pin|GEAR_Pin|BTN1_LCD_Pin
-                          |BTN2_LCD_Pin|BTN3_LCD_Pin|BTN4_LCD_Pin|ENC_BTN_Pin
-                          |RF_CE_Pin|RF_CS_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  /*Configure GPIO pins : AUX_TRIM_Pin SW_RIGHT_Pin GEAR_Pin BTN1_LCD_Pin
+                           BTN2_LCD_Pin BTN3_LCD_Pin BTN4_LCD_Pin BTN_ENC_Pin */
+  GPIO_InitStruct.Pin = AUX_TRIM_Pin|SW_RIGHT_Pin|GEAR_Pin|BTN1_LCD_Pin
+                          |BTN2_LCD_Pin|BTN3_LCD_Pin|BTN4_LCD_Pin|BTN_ENC_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : BTN_L_Ver_Pin LED_Pin Buzz_Pin FLAP_TRIM_Pin
-                           FLAP_Pin */
-  GPIO_InitStruct.Pin = BTN_L_Ver_Pin|LED_Pin|Buzz_Pin|FLAP_TRIM_Pin
-                          |FLAP_Pin;
+  /*Configure GPIO pins : Right_Ver_Pin Right_Hor_Pin Left_Ver_Pin Left_Hor_Pin */
+  GPIO_InitStruct.Pin = Right_Ver_Pin|Right_Hor_Pin|Left_Ver_Pin|Left_Hor_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : BTN_L_Ver_Pin FLAP_TRIM_Pin FLAP_Pin */
+  GPIO_InitStruct.Pin = BTN_L_Ver_Pin|FLAP_TRIM_Pin|FLAP_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : LED_Pin Buzz_Pin */
+  GPIO_InitStruct.Pin = LED_Pin|Buzz_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : BTN_R_Hor_R_Pin BTN_R_Hor_L_Pin BTN_L_Hor_R_Pin BTN_L_Hor_L_Pin
-                           BTN_R_Ver_Pin */
-  GPIO_InitStruct.Pin = BTN_R_Hor_R_Pin|BTN_R_Hor_L_Pin|BTN_L_Hor_R_Pin|BTN_L_Hor_L_Pin
-                          |BTN_R_Ver_Pin;
+  /*Configure GPIO pins : RF_CE_Pin RF_CS_Pin */
+  GPIO_InitStruct.Pin = RF_CE_Pin|RF_CS_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : BTN_R_Hor_R_Pin BTN_R_Hor_L_Pin BTN_L_Hor_R_Pin BTN_L_Hor_L_Pin */
+  GPIO_InitStruct.Pin = BTN_R_Hor_R_Pin|BTN_R_Hor_L_Pin|BTN_L_Hor_R_Pin|BTN_L_Hor_L_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : BTN_R_Ver_Pin */
+  GPIO_InitStruct.Pin = BTN_R_Ver_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(BTN_R_Ver_GPIO_Port, &GPIO_InitStruct);
 
 }
 
@@ -414,6 +484,30 @@ int _write(int file, char *outgoing, int len) {
     HAL_UART_Transmit(&huart3, (uint8_t *)outgoing, len, 100);
     return len;
 }
+
+void Init_Task(void *pvParameters) {}
+
+void Display_Task(void *pvParameters) {
+    for (;;) {
+    }
+}
+
+void Radio_Task(void *pvParameters) {
+  static int count = 1;
+    char Data[50];
+    sprintf(Data, "CMD,T,%d,R,%d,P,%d,Y,%d\n", Radio.PWMValue.Adc3,
+            Radio.PWMValue.Adc2, Radio.PWMValue.Adc1, Radio.PWMValue.Adc4);
+    Calculate_PWM(&Radio.PWMValue, Radio.ADCValue, &Radio.AdcOffset);
+    if(count > 5) {
+      if (Radio_Remain() > strlen(Data)) Radio_Put_String(Data);
+      Radio_Process();
+      count = 0;
+    }
+    count ++;
+}
+
+void ReadData_Task(void *pvParameters) {}
+
 /* USER CODE END 4 */
 
 /**

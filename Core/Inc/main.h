@@ -59,18 +59,12 @@ int _write(int file, char *outgoing, int len);
 /* Private defines -----------------------------------------------------------*/
 #define AUX_TRIM_Pin GPIO_PIN_0
 #define AUX_TRIM_GPIO_Port GPIOC
-#define SW_Right_Pin GPIO_PIN_1
-#define SW_Right_GPIO_Port GPIOC
+#define SW_RIGHT_Pin GPIO_PIN_1
+#define SW_RIGHT_GPIO_Port GPIOC
 #define GEAR_Pin GPIO_PIN_2
 #define GEAR_GPIO_Port GPIOC
 #define BTN1_LCD_Pin GPIO_PIN_3
 #define BTN1_LCD_GPIO_Port GPIOC
-#define Left_VAR_Pin GPIO_PIN_1
-#define Left_VAR_GPIO_Port GPIOA
-#define Right_VAR_Pin GPIO_PIN_2
-#define Right_VAR_GPIO_Port GPIOA
-#define ENC_LCD_Pin GPIO_PIN_3
-#define ENC_LCD_GPIO_Port GPIOA
 #define Right_Ver_Pin GPIO_PIN_4
 #define Right_Ver_GPIO_Port GPIOA
 #define Right_Hor_Pin GPIO_PIN_5
@@ -89,8 +83,8 @@ int _write(int file, char *outgoing, int len);
 #define LED_GPIO_Port GPIOB
 #define BTN4_LCD_Pin GPIO_PIN_6
 #define BTN4_LCD_GPIO_Port GPIOC
-#define ENC_BTN_Pin GPIO_PIN_7
-#define ENC_BTN_GPIO_Port GPIOC
+#define BTN_ENC_Pin GPIO_PIN_7
+#define BTN_ENC_GPIO_Port GPIOC
 #define RF_CE_Pin GPIO_PIN_8
 #define RF_CE_GPIO_Port GPIOC
 #define RF_CS_Pin GPIO_PIN_9
