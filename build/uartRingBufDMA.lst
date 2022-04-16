@@ -1,0 +1,2065 @@
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccvHVK4k.s 			page 1
+
+
+   1              		.cpu cortex-m3
+   2              		.arch armv7-m
+   3              		.fpu softvfp
+   4              		.eabi_attribute 20, 1
+   5              		.eabi_attribute 21, 1
+   6              		.eabi_attribute 23, 3
+   7              		.eabi_attribute 24, 1
+   8              		.eabi_attribute 25, 1
+   9              		.eabi_attribute 26, 1
+  10              		.eabi_attribute 30, 1
+  11              		.eabi_attribute 34, 1
+  12              		.eabi_attribute 18, 4
+  13              		.file	"uartRingBufDMA.c"
+  14              		.text
+  15              	.Ltext0:
+  16              		.cfi_sections	.debug_frame
+  17              		.section	.text.Is_available,"ax",%progbits
+  18              		.align	1
+  19              		.global	Is_available
+  20              		.syntax unified
+  21              		.thumb
+  22              		.thumb_func
+  24              	Is_available:
+  25              	.LVL0:
+  26              	.LFB74:
+  27              		.file 1 "Drivers/RingBuffer/Src/uartRingBufDMA.c"
+   1:Drivers/RingBuffer/Src/uartRingBufDMA.c **** /* USER CODE BEGIN Header */
+   2:Drivers/RingBuffer/Src/uartRingBufDMA.c **** /**
+   3:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  ******************************************************************************
+   4:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  * @file           : uartRingBufDMA.c
+   5:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  * @brief          : The source file of the library
+   6:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  ******************************************************************************
+   7:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  * @attention
+   8:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  *
+   9:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  * <h2><center>&copy; Copyright (c) 2022 Sang Tan Truong.
+  10:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  * All rights reserved.</center></h2>
+  11:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  *
+  12:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  * This software component is licensed by ST under BSD 3-Clause license,
+  13:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  * the "License"; You may not use this file except in compliance with the
+  14:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  * License. You may obtain a copy of the License at:
+  15:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  *                        opensource.org/licenses/BSD-3-Clause
+  16:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  *
+  17:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  ******************************************************************************
+  18:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  */
+  19:Drivers/RingBuffer/Src/uartRingBufDMA.c **** /* USER CODE END Header */
+  20:Drivers/RingBuffer/Src/uartRingBufDMA.c **** /* Includes ------------------------------------------------------------------*/
+  21:Drivers/RingBuffer/Src/uartRingBufDMA.c **** #include "uartRingBufDMA.h"
+  22:Drivers/RingBuffer/Src/uartRingBufDMA.c **** 
+  23:Drivers/RingBuffer/Src/uartRingBufDMA.c **** /* Private includes ----------------------------------------------------------*/
+  24:Drivers/RingBuffer/Src/uartRingBufDMA.c **** 
+  25:Drivers/RingBuffer/Src/uartRingBufDMA.c **** /* Private typedef -----------------------------------------------------------*/
+  26:Drivers/RingBuffer/Src/uartRingBufDMA.c **** 
+  27:Drivers/RingBuffer/Src/uartRingBufDMA.c **** /* Private define ------------------------------------------------------------*/
+  28:Drivers/RingBuffer/Src/uartRingBufDMA.c **** 
+  29:Drivers/RingBuffer/Src/uartRingBufDMA.c **** /* Private macro -------------------------------------------------------------*/
+  30:Drivers/RingBuffer/Src/uartRingBufDMA.c **** 
+  31:Drivers/RingBuffer/Src/uartRingBufDMA.c **** /* Private variables ---------------------------------------------------------*/
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccvHVK4k.s 			page 2
+
+
+  32:Drivers/RingBuffer/Src/uartRingBufDMA.c **** static RingBuffer_t *RingBuffer;
+  33:Drivers/RingBuffer/Src/uartRingBufDMA.c **** /* Private function prototypes -----------------------------------------------*/
+  34:Drivers/RingBuffer/Src/uartRingBufDMA.c **** 
+  35:Drivers/RingBuffer/Src/uartRingBufDMA.c **** /* Private user code ---------------------------------------------------------*/
+  36:Drivers/RingBuffer/Src/uartRingBufDMA.c **** /**
+  37:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  * @brief Initialize the Ring Buffer.
+  38:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  * @param Handle The pointer of the Ring Buffer Handler.
+  39:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  * @retval void
+  40:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  */
+  41:Drivers/RingBuffer/Src/uartRingBufDMA.c **** void Ring_Init(RingBuffer_t *Handle) {
+  42:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     RingBuffer = Handle;
+  43:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     Ring_Reset();
+  44:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     if (RingBuffer->Ring1.enable == true) {
+  45:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         Ring_Restart_Uart(&RingBuffer->Ring1);
+  46:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     }
+  47:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     if (RingBuffer->Ring2.enable == true) {
+  48:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         Ring_Restart_Uart(&RingBuffer->Ring2);
+  49:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     }
+  50:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     if (RingBuffer->Ring3.enable == true) {
+  51:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         Ring_Restart_Uart(&RingBuffer->Ring3);
+  52:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     }
+  53:Drivers/RingBuffer/Src/uartRingBufDMA.c **** }
+  54:Drivers/RingBuffer/Src/uartRingBufDMA.c **** 
+  55:Drivers/RingBuffer/Src/uartRingBufDMA.c **** /**
+  56:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  * @brief Detect the particular character.
+  57:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  * @param RingHandler The Ring Handler.
+  58:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  * @param Deli The character needs to find.
+  59:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  * @retval bool True means detected and False is remaining case.
+  60:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  */
+  61:Drivers/RingBuffer/Src/uartRingBufDMA.c **** bool Detect_Char(RingHandler_t *RingHandler, const char Deli) {
+  62:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     bool retval = false;
+  63:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     uint8_t *Temp = NULL;
+  64:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     int Availabe;
+  65:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     Availabe = Is_available(RingHandler);
+  66:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     if (Availabe > 0) {
+  67:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         Temp = malloc(RING_BUFFER_SIZE);
+  68:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         if (Temp == NULL) return -1;
+  69:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         get_peek(RingHandler, Temp, Availabe);
+  70:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         int Index = IndexOf(Temp, Deli, Availabe);
+  71:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         if(Index != -1) {
+  72:Drivers/RingBuffer/Src/uartRingBufDMA.c ****             retval = true;
+  73:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         }
+  74:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         free(Temp);
+  75:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     }
+  76:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     return retval;
+  77:Drivers/RingBuffer/Src/uartRingBufDMA.c **** }
+  78:Drivers/RingBuffer/Src/uartRingBufDMA.c **** 
+  79:Drivers/RingBuffer/Src/uartRingBufDMA.c **** /**
+  80:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  * @brief Check the data available or not.
+  81:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  * @param RingHandler The Ring Handler.
+  82:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  * @retval int: zero meant empty, > 0 mean available data.
+  83:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  */
+  84:Drivers/RingBuffer/Src/uartRingBufDMA.c **** int Is_available(RingHandler_t *RingHandler) {
+  28              		.loc 1 84 46 view -0
+  29              		.cfi_startproc
+  30              		@ args = 0, pretend = 0, frame = 0
+  31              		@ frame_needed = 0, uses_anonymous_args = 0
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccvHVK4k.s 			page 3
+
+
+  32              		@ link register save eliminated.
+  85:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     uint16_t Head = RingHandler->Head;
+  33              		.loc 1 85 5 view .LVU1
+  34              		.loc 1 85 32 is_stmt 0 view .LVU2
+  35 0000 C368     		ldr	r3, [r0, #12]
+  36              		.loc 1 85 14 view .LVU3
+  37 0002 99B2     		uxth	r1, r3
+  38              	.LVL1:
+  86:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     uint16_t Tail = RingHandler->Tail;
+  39              		.loc 1 86 5 is_stmt 1 view .LVU4
+  40              		.loc 1 86 32 is_stmt 0 view .LVU5
+  41 0004 0069     		ldr	r0, [r0, #16]
+  42              	.LVL2:
+  43              		.loc 1 86 14 view .LVU6
+  44 0006 82B2     		uxth	r2, r0
+  45              	.LVL3:
+  87:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     int available = 0;
+  46              		.loc 1 87 5 is_stmt 1 view .LVU7
+  88:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     if (Head > Tail) {
+  47              		.loc 1 88 5 view .LVU8
+  48              		.loc 1 88 8 is_stmt 0 view .LVU9
+  49 0008 9142     		cmp	r1, r2
+  50 000a 01D9     		bls	.L2
+  89:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         available = Head - Tail;
+  51              		.loc 1 89 9 is_stmt 1 view .LVU10
+  52              		.loc 1 89 19 is_stmt 0 view .LVU11
+  53 000c 881A     		subs	r0, r1, r2
+  54              	.LVL4:
+  55              		.loc 1 89 19 view .LVU12
+  56 000e 7047     		bx	lr
+  57              	.LVL5:
+  58              	.L2:
+  90:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     } else if (Head < Tail) {
+  59              		.loc 1 90 12 is_stmt 1 view .LVU13
+  60              		.loc 1 90 15 is_stmt 0 view .LVU14
+  61 0010 9142     		cmp	r1, r2
+  62 0012 05D2     		bcs	.L4
+  91:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         available = RING_BUFFER_SIZE - Tail + Head;
+  63              		.loc 1 91 9 is_stmt 1 view .LVU15
+  64              		.loc 1 91 38 is_stmt 0 view .LVU16
+  65 0014 80B2     		uxth	r0, r0
+  66 0016 C0F58060 		rsb	r0, r0, #1024
+  67              		.loc 1 91 19 view .LVU17
+  68 001a 9BB2     		uxth	r3, r3
+  69 001c 1844     		add	r0, r0, r3
+  70              	.LVL6:
+  71              		.loc 1 91 19 view .LVU18
+  72 001e 7047     		bx	lr
+  73              	.LVL7:
+  74              	.L4:
+  87:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     if (Head > Tail) {
+  75              		.loc 1 87 9 view .LVU19
+  76 0020 0020     		movs	r0, #0
+  92:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     }
+  93:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     return available;
+  77              		.loc 1 93 5 is_stmt 1 view .LVU20
+  94:Drivers/RingBuffer/Src/uartRingBufDMA.c **** }
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccvHVK4k.s 			page 4
+
+
+  78              		.loc 1 94 1 is_stmt 0 view .LVU21
+  79 0022 7047     		bx	lr
+  80              		.cfi_endproc
+  81              	.LFE74:
+  83              		.section	.text.Ring_Reset,"ax",%progbits
+  84              		.align	1
+  85              		.global	Ring_Reset
+  86              		.syntax unified
+  87              		.thumb
+  88              		.thumb_func
+  90              	Ring_Reset:
+  91              	.LFB78:
+  95:Drivers/RingBuffer/Src/uartRingBufDMA.c **** 
+  96:Drivers/RingBuffer/Src/uartRingBufDMA.c **** /**
+  97:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  * @brief Get char from the buffer.
+  98:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  * @param RingHandler The Ring Handler.
+  99:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  * @retval uint8_t
+ 100:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  */
+ 101:Drivers/RingBuffer/Src/uartRingBufDMA.c **** uint8_t get_char(RingHandler_t *RingHandler) {
+ 102:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     uint8_t retval = '\0';
+ 103:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     uint16_t Tail = RingHandler->Tail;
+ 104:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     if (RingHandler->Head != Tail) {
+ 105:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         retval = RingHandler->MainBuffer[Tail];
+ 106:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         Ring_Increase_Tail(RingHandler, 1);
+ 107:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     }
+ 108:Drivers/RingBuffer/Src/uartRingBufDMA.c **** 
+ 109:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     return retval;
+ 110:Drivers/RingBuffer/Src/uartRingBufDMA.c **** }
+ 111:Drivers/RingBuffer/Src/uartRingBufDMA.c **** 
+ 112:Drivers/RingBuffer/Src/uartRingBufDMA.c **** /**
+ 113:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  * @brief Get string from the buffer.
+ 114:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  * @note This function is difference with the get_peek function. This function
+ 115:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  * will increse the tail of the buffer.
+ 116:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  * @param RingHandler The Ring Handler.
+ 117:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  * @param Buffer The pointer of the buffer.
+ 118:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  * @param Size The number char to read.
+ 119:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  * @retval int The number of char in the buffer.
+ 120:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  */
+ 121:Drivers/RingBuffer/Src/uartRingBufDMA.c **** int get_string(RingHandler_t *RingHandler, uint8_t *Buffer, uint16_t Size) {
+ 122:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     int DataCanRead = get_peek(RingHandler, Buffer, Size);
+ 123:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     if (DataCanRead != 0) {
+ 124:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         Ring_Increase_Tail(RingHandler, DataCanRead);
+ 125:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     }
+ 126:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     return DataCanRead;
+ 127:Drivers/RingBuffer/Src/uartRingBufDMA.c **** }
+ 128:Drivers/RingBuffer/Src/uartRingBufDMA.c **** 
+ 129:Drivers/RingBuffer/Src/uartRingBufDMA.c **** /**
+ 130:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  * @brief Get peek string from the buffer.
+ 131:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  * @param RingHandler The Ring Handler.
+ 132:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  * @param Buffer The pointer of the buffer.
+ 133:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  * @param Size The number char to read.
+ 134:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  * @retval int The number of char in the buffer.
+ 135:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  */
+ 136:Drivers/RingBuffer/Src/uartRingBufDMA.c **** int get_peek(RingHandler_t *RingHandler, uint8_t *Buffer, uint16_t Size) {
+ 137:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     int available = Is_available(RingHandler);
+ 138:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     int DataToRead = Size;
+ 139:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     if (Size > available) {
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccvHVK4k.s 			page 5
+
+
+ 140:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         DataToRead = available;
+ 141:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     }
+ 142:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     Ring_Copy_Buffer(RingHandler, Buffer, DataToRead);
+ 143:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     return DataToRead;
+ 144:Drivers/RingBuffer/Src/uartRingBufDMA.c **** }
+ 145:Drivers/RingBuffer/Src/uartRingBufDMA.c **** 
+ 146:Drivers/RingBuffer/Src/uartRingBufDMA.c **** /**
+ 147:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  * @brief Ring Buffer reset.
+ 148:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  * @retval void
+ 149:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  */
+ 150:Drivers/RingBuffer/Src/uartRingBufDMA.c **** void Ring_Reset(void) {
+  92              		.loc 1 150 23 is_stmt 1 view -0
+  93              		.cfi_startproc
+  94              		@ args = 0, pretend = 0, frame = 0
+  95              		@ frame_needed = 0, uses_anonymous_args = 0
+  96 0000 10B5     		push	{r4, lr}
+  97              	.LCFI0:
+  98              		.cfi_def_cfa_offset 8
+  99              		.cfi_offset 4, -8
+ 100              		.cfi_offset 14, -4
+ 151:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     // Reset for the first ring
+ 152:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     if (RingBuffer->Ring1.Timeout == 0) {
+ 101              		.loc 1 152 5 view .LVU23
+ 102              		.loc 1 152 19 is_stmt 0 view .LVU24
+ 103 0002 1B4B     		ldr	r3, .L10
+ 104 0004 1C68     		ldr	r4, [r3]
+ 105              		.loc 1 152 26 view .LVU25
+ 106 0006 D4F85434 		ldr	r3, [r4, #1108]
+ 107              		.loc 1 152 8 view .LVU26
+ 108 000a 1BB9     		cbnz	r3, .L6
+ 153:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         RingBuffer->Ring1.Timeout = RING_TIMEOUT;
+ 109              		.loc 1 153 9 is_stmt 1 view .LVU27
+ 110              		.loc 1 153 35 is_stmt 0 view .LVU28
+ 111 000c 41F28833 		movw	r3, #5000
+ 112 0010 C4F85434 		str	r3, [r4, #1108]
+ 113              	.L6:
+ 154:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     }
+ 155:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     RingBuffer->Ring1.Head = 0;
+ 114              		.loc 1 155 5 is_stmt 1 view .LVU29
+ 115              		.loc 1 155 28 is_stmt 0 view .LVU30
+ 116 0014 0021     		movs	r1, #0
+ 117 0016 E160     		str	r1, [r4, #12]
+ 156:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     RingBuffer->Ring1.Tail = 0;
+ 118              		.loc 1 156 5 is_stmt 1 view .LVU31
+ 119              		.loc 1 156 28 is_stmt 0 view .LVU32
+ 120 0018 2161     		str	r1, [r4, #16]
+ 157:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     memset(RingBuffer->Ring1.MainBuffer, '\0', RING_BUFFER_SIZE);
+ 121              		.loc 1 157 5 is_stmt 1 view .LVU33
+ 122 001a 4FF48062 		mov	r2, #1024
+ 123 001e 04F11400 		add	r0, r4, #20
+ 124 0022 FFF7FEFF 		bl	memset
+ 125              	.LVL8:
+ 158:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     // Reset for the second ring
+ 159:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     if (RingBuffer->Ring2.Timeout == 0) {
+ 126              		.loc 1 159 5 view .LVU34
+ 127              		.loc 1 159 26 is_stmt 0 view .LVU35
+ 128 0026 D4F8AC38 		ldr	r3, [r4, #2220]
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccvHVK4k.s 			page 6
+
+
+ 129              		.loc 1 159 8 view .LVU36
+ 130 002a 1BB9     		cbnz	r3, .L7
+ 160:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         RingBuffer->Ring2.Timeout = RING_TIMEOUT;
+ 131              		.loc 1 160 9 is_stmt 1 view .LVU37
+ 132              		.loc 1 160 35 is_stmt 0 view .LVU38
+ 133 002c 41F28833 		movw	r3, #5000
+ 134 0030 C4F8AC38 		str	r3, [r4, #2220]
+ 135              	.L7:
+ 161:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     }
+ 162:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     RingBuffer->Ring2.Head = 0;
+ 136              		.loc 1 162 5 is_stmt 1 view .LVU39
+ 137              		.loc 1 162 28 is_stmt 0 view .LVU40
+ 138 0034 0021     		movs	r1, #0
+ 139 0036 C4F86414 		str	r1, [r4, #1124]
+ 163:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     RingBuffer->Ring2.Tail = 0;
+ 140              		.loc 1 163 5 is_stmt 1 view .LVU41
+ 141              		.loc 1 163 28 is_stmt 0 view .LVU42
+ 142 003a C4F86814 		str	r1, [r4, #1128]
+ 164:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     memset(RingBuffer->Ring2.MainBuffer, '\0', RING_BUFFER_SIZE);
+ 143              		.loc 1 164 5 is_stmt 1 view .LVU43
+ 144 003e 4FF48062 		mov	r2, #1024
+ 145 0042 04F26C40 		addw	r0, r4, #1132
+ 146 0046 FFF7FEFF 		bl	memset
+ 147              	.LVL9:
+ 165:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     // Reset for the third ring
+ 166:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     if (RingBuffer->Ring3.Timeout == 0) {
+ 148              		.loc 1 166 5 view .LVU44
+ 149              		.loc 1 166 26 is_stmt 0 view .LVU45
+ 150 004a D4F8043D 		ldr	r3, [r4, #3332]
+ 151              		.loc 1 166 8 view .LVU46
+ 152 004e 1BB9     		cbnz	r3, .L8
+ 167:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         RingBuffer->Ring3.Timeout = RING_TIMEOUT;
+ 153              		.loc 1 167 9 is_stmt 1 view .LVU47
+ 154              		.loc 1 167 35 is_stmt 0 view .LVU48
+ 155 0050 41F28833 		movw	r3, #5000
+ 156 0054 C4F8043D 		str	r3, [r4, #3332]
+ 157              	.L8:
+ 168:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     }
+ 169:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     RingBuffer->Ring3.Head = 0;
+ 158              		.loc 1 169 5 is_stmt 1 view .LVU49
+ 159              		.loc 1 169 28 is_stmt 0 view .LVU50
+ 160 0058 0021     		movs	r1, #0
+ 161 005a C4F8BC18 		str	r1, [r4, #2236]
+ 170:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     RingBuffer->Ring3.Tail = 0;
+ 162              		.loc 1 170 5 is_stmt 1 view .LVU51
+ 163              		.loc 1 170 28 is_stmt 0 view .LVU52
+ 164 005e C4F8C018 		str	r1, [r4, #2240]
+ 171:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     memset(RingBuffer->Ring3.MainBuffer, '\0', RING_BUFFER_SIZE);
+ 165              		.loc 1 171 5 is_stmt 1 view .LVU53
+ 166 0062 4FF48062 		mov	r2, #1024
+ 167 0066 04F6C400 		addw	r0, r4, #2244
+ 168 006a FFF7FEFF 		bl	memset
+ 169              	.LVL10:
+ 172:Drivers/RingBuffer/Src/uartRingBufDMA.c **** }
+ 170              		.loc 1 172 1 is_stmt 0 view .LVU54
+ 171 006e 10BD     		pop	{r4, pc}
+ 172              	.L11:
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccvHVK4k.s 			page 7
+
+
+ 173              		.align	2
+ 174              	.L10:
+ 175 0070 00000000 		.word	.LANCHOR0
+ 176              		.cfi_endproc
+ 177              	.LFE78:
+ 179              		.section	.text.Ring_Restart_Uart,"ax",%progbits
+ 180              		.align	1
+ 181              		.global	Ring_Restart_Uart
+ 182              		.syntax unified
+ 183              		.thumb
+ 184              		.thumb_func
+ 186              	Ring_Restart_Uart:
+ 187              	.LVL11:
+ 188              	.LFB80:
+ 173:Drivers/RingBuffer/Src/uartRingBufDMA.c **** /**
+ 174:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  * @brief The function handle the UART interrupt.
+ 175:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  * @param huart The pointer of the uart handler.
+ 176:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  * @param Size The size of the data.
+ 177:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  * @retval void
+ 178:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  */
+ 179:Drivers/RingBuffer/Src/uartRingBufDMA.c **** void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
+ 180:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     // Variable declaration
+ 181:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     RingHandler_t *Ring = &RingBuffer->Ring1;
+ 182:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     int pos;
+ 183:Drivers/RingBuffer/Src/uartRingBufDMA.c **** // Find the ring buffer handler
+ 184:Drivers/RingBuffer/Src/uartRingBufDMA.c **** #ifdef USE_RING_1
+ 185:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     if (huart->Instance == uart1) {
+ 186:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         Ring = &RingBuffer->Ring1;
+ 187:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     }
+ 188:Drivers/RingBuffer/Src/uartRingBufDMA.c **** #endif
+ 189:Drivers/RingBuffer/Src/uartRingBufDMA.c **** #ifdef USE_RING_2
+ 190:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     if (huart->Instance == uart2) {
+ 191:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         Ring = &RingBuffer->Ring2;
+ 192:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     }
+ 193:Drivers/RingBuffer/Src/uartRingBufDMA.c **** #endif
+ 194:Drivers/RingBuffer/Src/uartRingBufDMA.c **** #ifdef USE_RING_3
+ 195:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     if (huart->Instance == uart3) {
+ 196:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         Ring = &RingBuffer->Ring3;
+ 197:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     }
+ 198:Drivers/RingBuffer/Src/uartRingBufDMA.c **** #endif
+ 199:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     pos = Ring->Head;
+ 200:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     // Calculate remaining size
+ 201:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     int Remain = Ring->Tail - Ring->Head;
+ 202:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     if (Remain <= 0) {
+ 203:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         Remain += RING_BUFFER_SIZE;
+ 204:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     }
+ 205:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     // Check if the new data exceeds the remain buffer size
+ 206:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     if (pos + Size >= RING_BUFFER_SIZE) {
+ 207:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         uint16_t DataToCopy = RING_BUFFER_SIZE - pos;
+ 208:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         memcpy((Ring->MainBuffer + pos), Ring->RxBuffer, DataToCopy);
+ 209:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         pos = 0;
+ 210:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         memcpy(Ring->MainBuffer, (Ring->RxBuffer + DataToCopy),
+ 211:Drivers/RingBuffer/Src/uartRingBufDMA.c ****                Size - DataToCopy);
+ 212:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         Ring->Head = Size - DataToCopy;
+ 213:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     } else {
+ 214:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         memcpy(Ring->MainBuffer + pos, Ring->RxBuffer, Size);
+ 215:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         Ring->Head = pos + Size;
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccvHVK4k.s 			page 8
+
+
+ 216:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     }
+ 217:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     //Increase the Tail pointer above the Head 1
+ 218:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     if(Size >= Remain) {
+ 219:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         Ring->Tail = Ring->Head + 1;
+ 220:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     }
+ 221:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     // Start the DMA again
+ 222:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     Ring_Restart_Uart(Ring);
+ 223:Drivers/RingBuffer/Src/uartRingBufDMA.c **** }
+ 224:Drivers/RingBuffer/Src/uartRingBufDMA.c **** 
+ 225:Drivers/RingBuffer/Src/uartRingBufDMA.c **** /**
+ 226:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  * @brief Restart the Uart.
+ 227:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  * @param RingHandler The pointer of the Ring Handler.
+ 228:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  * @retval void
+ 229:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  */
+ 230:Drivers/RingBuffer/Src/uartRingBufDMA.c **** void Ring_Restart_Uart(RingHandler_t *RingHandle) {
+ 189              		.loc 1 230 51 is_stmt 1 view -0
+ 190              		.cfi_startproc
+ 191              		@ args = 0, pretend = 0, frame = 0
+ 192              		@ frame_needed = 0, uses_anonymous_args = 0
+ 193              		.loc 1 230 51 is_stmt 0 view .LVU56
+ 194 0000 10B5     		push	{r4, lr}
+ 195              	.LCFI1:
+ 196              		.cfi_def_cfa_offset 8
+ 197              		.cfi_offset 4, -8
+ 198              		.cfi_offset 14, -4
+ 199 0002 0446     		mov	r4, r0
+ 231:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     HAL_UARTEx_ReceiveToIdle_DMA(RingHandle->huart, RingHandle->RxBuffer,
+ 200              		.loc 1 231 5 is_stmt 1 view .LVU57
+ 201 0004 4022     		movs	r2, #64
+ 202 0006 00F21441 		addw	r1, r0, #1044
+ 203 000a 4068     		ldr	r0, [r0, #4]
+ 204              	.LVL12:
+ 205              		.loc 1 231 5 is_stmt 0 view .LVU58
+ 206 000c FFF7FEFF 		bl	HAL_UARTEx_ReceiveToIdle_DMA
+ 207              	.LVL13:
+ 232:Drivers/RingBuffer/Src/uartRingBufDMA.c ****                                  RING_RX_BUFFER);
+ 233:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     __HAL_DMA_DISABLE_IT(RingHandle->hdma, DMA_IT_HT);
+ 208              		.loc 1 233 5 is_stmt 1 view .LVU59
+ 209 0010 A368     		ldr	r3, [r4, #8]
+ 210 0012 1A68     		ldr	r2, [r3]
+ 211 0014 1368     		ldr	r3, [r2]
+ 212 0016 23F00803 		bic	r3, r3, #8
+ 213 001a 1360     		str	r3, [r2]
+ 234:Drivers/RingBuffer/Src/uartRingBufDMA.c **** }
+ 214              		.loc 1 234 1 is_stmt 0 view .LVU60
+ 215 001c 10BD     		pop	{r4, pc}
+ 216              		.loc 1 234 1 view .LVU61
+ 217              		.cfi_endproc
+ 218              	.LFE80:
+ 220              		.section	.text.Ring_Init,"ax",%progbits
+ 221              		.align	1
+ 222              		.global	Ring_Init
+ 223              		.syntax unified
+ 224              		.thumb
+ 225              		.thumb_func
+ 227              	Ring_Init:
+ 228              	.LVL14:
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccvHVK4k.s 			page 9
+
+
+ 229              	.LFB72:
+  41:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     RingBuffer = Handle;
+ 230              		.loc 1 41 38 is_stmt 1 view -0
+ 231              		.cfi_startproc
+ 232              		@ args = 0, pretend = 0, frame = 0
+ 233              		@ frame_needed = 0, uses_anonymous_args = 0
+  41:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     RingBuffer = Handle;
+ 234              		.loc 1 41 38 is_stmt 0 view .LVU63
+ 235 0000 10B5     		push	{r4, lr}
+ 236              	.LCFI2:
+ 237              		.cfi_def_cfa_offset 8
+ 238              		.cfi_offset 4, -8
+ 239              		.cfi_offset 14, -4
+  42:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     Ring_Reset();
+ 240              		.loc 1 42 5 is_stmt 1 view .LVU64
+  42:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     Ring_Reset();
+ 241              		.loc 1 42 16 is_stmt 0 view .LVU65
+ 242 0002 0F4C     		ldr	r4, .L22
+ 243 0004 2060     		str	r0, [r4]
+  43:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     if (RingBuffer->Ring1.enable == true) {
+ 244              		.loc 1 43 5 is_stmt 1 view .LVU66
+ 245 0006 FFF7FEFF 		bl	Ring_Reset
+ 246              	.LVL15:
+  44:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         Ring_Restart_Uart(&RingBuffer->Ring1);
+ 247              		.loc 1 44 5 view .LVU67
+  44:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         Ring_Restart_Uart(&RingBuffer->Ring1);
+ 248              		.loc 1 44 19 is_stmt 0 view .LVU68
+ 249 000a 2068     		ldr	r0, [r4]
+  44:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         Ring_Restart_Uart(&RingBuffer->Ring1);
+ 250              		.loc 1 44 26 view .LVU69
+ 251 000c 0378     		ldrb	r3, [r0]	@ zero_extendqisi2
+  44:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         Ring_Restart_Uart(&RingBuffer->Ring1);
+ 252              		.loc 1 44 8 view .LVU70
+ 253 000e 53B9     		cbnz	r3, .L19
+ 254              	.L15:
+  47:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         Ring_Restart_Uart(&RingBuffer->Ring2);
+ 255              		.loc 1 47 5 is_stmt 1 view .LVU71
+  47:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         Ring_Restart_Uart(&RingBuffer->Ring2);
+ 256              		.loc 1 47 19 is_stmt 0 view .LVU72
+ 257 0010 0B4B     		ldr	r3, .L22
+ 258 0012 1868     		ldr	r0, [r3]
+  47:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         Ring_Restart_Uart(&RingBuffer->Ring2);
+ 259              		.loc 1 47 26 view .LVU73
+ 260 0014 90F85834 		ldrb	r3, [r0, #1112]	@ zero_extendqisi2
+  47:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         Ring_Restart_Uart(&RingBuffer->Ring2);
+ 261              		.loc 1 47 8 view .LVU74
+ 262 0018 43B9     		cbnz	r3, .L20
+ 263              	.L16:
+  50:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         Ring_Restart_Uart(&RingBuffer->Ring3);
+ 264              		.loc 1 50 5 is_stmt 1 view .LVU75
+  50:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         Ring_Restart_Uart(&RingBuffer->Ring3);
+ 265              		.loc 1 50 19 is_stmt 0 view .LVU76
+ 266 001a 094B     		ldr	r3, .L22
+ 267 001c 1868     		ldr	r0, [r3]
+  50:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         Ring_Restart_Uart(&RingBuffer->Ring3);
+ 268              		.loc 1 50 26 view .LVU77
+ 269 001e 90F8B038 		ldrb	r3, [r0, #2224]	@ zero_extendqisi2
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccvHVK4k.s 			page 10
+
+
+  50:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         Ring_Restart_Uart(&RingBuffer->Ring3);
+ 270              		.loc 1 50 8 view .LVU78
+ 271 0022 43B9     		cbnz	r3, .L21
+ 272              	.L14:
+  53:Drivers/RingBuffer/Src/uartRingBufDMA.c **** 
+ 273              		.loc 1 53 1 view .LVU79
+ 274 0024 10BD     		pop	{r4, pc}
+ 275              	.L19:
+  45:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     }
+ 276              		.loc 1 45 9 is_stmt 1 view .LVU80
+ 277 0026 FFF7FEFF 		bl	Ring_Restart_Uart
+ 278              	.LVL16:
+ 279 002a F1E7     		b	.L15
+ 280              	.L20:
+  48:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     }
+ 281              		.loc 1 48 9 view .LVU81
+ 282 002c 00F58B60 		add	r0, r0, #1112
+ 283 0030 FFF7FEFF 		bl	Ring_Restart_Uart
+ 284              	.LVL17:
+ 285 0034 F1E7     		b	.L16
+ 286              	.L21:
+  51:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     }
+ 287              		.loc 1 51 9 view .LVU82
+ 288 0036 00F50B60 		add	r0, r0, #2224
+ 289 003a FFF7FEFF 		bl	Ring_Restart_Uart
+ 290              	.LVL18:
+  53:Drivers/RingBuffer/Src/uartRingBufDMA.c **** 
+ 291              		.loc 1 53 1 is_stmt 0 view .LVU83
+ 292 003e F1E7     		b	.L14
+ 293              	.L23:
+ 294              		.align	2
+ 295              	.L22:
+ 296 0040 00000000 		.word	.LANCHOR0
+ 297              		.cfi_endproc
+ 298              	.LFE72:
+ 300              		.section	.text.HAL_UARTEx_RxEventCallback,"ax",%progbits
+ 301              		.align	1
+ 302              		.global	HAL_UARTEx_RxEventCallback
+ 303              		.syntax unified
+ 304              		.thumb
+ 305              		.thumb_func
+ 307              	HAL_UARTEx_RxEventCallback:
+ 308              	.LVL19:
+ 309              	.LFB79:
+ 179:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     // Variable declaration
+ 310              		.loc 1 179 75 is_stmt 1 view -0
+ 311              		.cfi_startproc
+ 312              		@ args = 0, pretend = 0, frame = 0
+ 313              		@ frame_needed = 0, uses_anonymous_args = 0
+ 179:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     // Variable declaration
+ 314              		.loc 1 179 75 is_stmt 0 view .LVU85
+ 315 0000 2DE9F047 		push	{r4, r5, r6, r7, r8, r9, r10, lr}
+ 316              	.LCFI3:
+ 317              		.cfi_def_cfa_offset 32
+ 318              		.cfi_offset 4, -32
+ 319              		.cfi_offset 5, -28
+ 320              		.cfi_offset 6, -24
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccvHVK4k.s 			page 11
+
+
+ 321              		.cfi_offset 7, -20
+ 322              		.cfi_offset 8, -16
+ 323              		.cfi_offset 9, -12
+ 324              		.cfi_offset 10, -8
+ 325              		.cfi_offset 14, -4
+ 326 0004 0D46     		mov	r5, r1
+ 181:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     int pos;
+ 327              		.loc 1 181 5 is_stmt 1 view .LVU86
+ 181:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     int pos;
+ 328              		.loc 1 181 38 is_stmt 0 view .LVU87
+ 329 0006 1D4B     		ldr	r3, .L31
+ 330 0008 1C68     		ldr	r4, [r3]
+ 331              	.LVL20:
+ 182:Drivers/RingBuffer/Src/uartRingBufDMA.c **** // Find the ring buffer handler
+ 332              		.loc 1 182 5 is_stmt 1 view .LVU88
+ 185:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         Ring = &RingBuffer->Ring1;
+ 333              		.loc 1 185 5 view .LVU89
+ 199:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     // Calculate remaining size
+ 334              		.loc 1 199 5 view .LVU90
+ 199:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     // Calculate remaining size
+ 335              		.loc 1 199 9 is_stmt 0 view .LVU91
+ 336 000a E368     		ldr	r3, [r4, #12]
+ 337              	.LVL21:
+ 201:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     if (Remain <= 0) {
+ 338              		.loc 1 201 5 is_stmt 1 view .LVU92
+ 201:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     if (Remain <= 0) {
+ 339              		.loc 1 201 22 is_stmt 0 view .LVU93
+ 340 000c 2669     		ldr	r6, [r4, #16]
+ 201:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     if (Remain <= 0) {
+ 341              		.loc 1 201 9 view .LVU94
+ 342 000e F61A     		subs	r6, r6, r3
+ 343              	.LVL22:
+ 202:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         Remain += RING_BUFFER_SIZE;
+ 344              		.loc 1 202 5 is_stmt 1 view .LVU95
+ 202:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         Remain += RING_BUFFER_SIZE;
+ 345              		.loc 1 202 8 is_stmt 0 view .LVU96
+ 346 0010 002E     		cmp	r6, #0
+ 347 0012 25DD     		ble	.L30
+ 348              	.L25:
+ 206:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         uint16_t DataToCopy = RING_BUFFER_SIZE - pos;
+ 349              		.loc 1 206 5 is_stmt 1 view .LVU97
+ 206:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         uint16_t DataToCopy = RING_BUFFER_SIZE - pos;
+ 350              		.loc 1 206 13 is_stmt 0 view .LVU98
+ 351 0014 EF18     		adds	r7, r5, r3
+ 206:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         uint16_t DataToCopy = RING_BUFFER_SIZE - pos;
+ 352              		.loc 1 206 8 view .LVU99
+ 353 0016 B7F5806F 		cmp	r7, #1024
+ 354 001a 24DB     		blt	.L26
+ 355              	.LBB2:
+ 207:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         memcpy((Ring->MainBuffer + pos), Ring->RxBuffer, DataToCopy);
+ 356              		.loc 1 207 9 is_stmt 1 view .LVU100
+ 207:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         memcpy((Ring->MainBuffer + pos), Ring->RxBuffer, DataToCopy);
+ 357              		.loc 1 207 48 is_stmt 0 view .LVU101
+ 358 001c 9FB2     		uxth	r7, r3
+ 207:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         memcpy((Ring->MainBuffer + pos), Ring->RxBuffer, DataToCopy);
+ 359              		.loc 1 207 18 view .LVU102
+ 360 001e C7F58067 		rsb	r7, r7, #1024
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccvHVK4k.s 			page 12
+
+
+ 361 0022 BFB2     		uxth	r7, r7
+ 362              	.LVL23:
+ 208:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         pos = 0;
+ 363              		.loc 1 208 9 is_stmt 1 view .LVU103
+ 208:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         pos = 0;
+ 364              		.loc 1 208 17 is_stmt 0 view .LVU104
+ 365 0024 04F11408 		add	r8, r4, #20
+ 208:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         pos = 0;
+ 366              		.loc 1 208 46 view .LVU105
+ 367 0028 04F21449 		addw	r9, r4, #1044
+ 208:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         pos = 0;
+ 368              		.loc 1 208 9 view .LVU106
+ 369 002c 3A46     		mov	r2, r7
+ 370 002e 4946     		mov	r1, r9
+ 371              	.LVL24:
+ 208:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         pos = 0;
+ 372              		.loc 1 208 9 view .LVU107
+ 373 0030 08EB0300 		add	r0, r8, r3
+ 374              	.LVL25:
+ 208:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         pos = 0;
+ 375              		.loc 1 208 9 view .LVU108
+ 376 0034 FFF7FEFF 		bl	memcpy
+ 377              	.LVL26:
+ 209:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         memcpy(Ring->MainBuffer, (Ring->RxBuffer + DataToCopy),
+ 378              		.loc 1 209 9 is_stmt 1 view .LVU109
+ 210:Drivers/RingBuffer/Src/uartRingBufDMA.c ****                Size - DataToCopy);
+ 379              		.loc 1 210 9 view .LVU110
+ 211:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         Ring->Head = Size - DataToCopy;
+ 380              		.loc 1 211 21 is_stmt 0 view .LVU111
+ 381 0038 A5EB070A 		sub	r10, r5, r7
+ 210:Drivers/RingBuffer/Src/uartRingBufDMA.c ****                Size - DataToCopy);
+ 382              		.loc 1 210 9 view .LVU112
+ 383 003c 5246     		mov	r2, r10
+ 384 003e 09EB0701 		add	r1, r9, r7
+ 385 0042 4046     		mov	r0, r8
+ 386 0044 FFF7FEFF 		bl	memcpy
+ 387              	.LVL27:
+ 212:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     } else {
+ 388              		.loc 1 212 9 is_stmt 1 view .LVU113
+ 212:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     } else {
+ 389              		.loc 1 212 20 is_stmt 0 view .LVU114
+ 390 0048 C4F80CA0 		str	r10, [r4, #12]
+ 391              	.LVL28:
+ 392              	.L27:
+ 212:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     } else {
+ 393              		.loc 1 212 20 view .LVU115
+ 394              	.LBE2:
+ 218:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         Ring->Tail = Ring->Head + 1;
+ 395              		.loc 1 218 5 is_stmt 1 view .LVU116
+ 218:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         Ring->Tail = Ring->Head + 1;
+ 396              		.loc 1 218 7 is_stmt 0 view .LVU117
+ 397 004c B542     		cmp	r5, r6
+ 398 004e 02DB     		blt	.L28
+ 219:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     }
+ 399              		.loc 1 219 9 is_stmt 1 view .LVU118
+ 219:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     }
+ 400              		.loc 1 219 26 is_stmt 0 view .LVU119
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccvHVK4k.s 			page 13
+
+
+ 401 0050 E368     		ldr	r3, [r4, #12]
+ 219:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     }
+ 402              		.loc 1 219 33 view .LVU120
+ 403 0052 0133     		adds	r3, r3, #1
+ 219:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     }
+ 404              		.loc 1 219 20 view .LVU121
+ 405 0054 2361     		str	r3, [r4, #16]
+ 406              	.L28:
+ 222:Drivers/RingBuffer/Src/uartRingBufDMA.c **** }
+ 407              		.loc 1 222 5 is_stmt 1 view .LVU122
+ 408 0056 2046     		mov	r0, r4
+ 409 0058 FFF7FEFF 		bl	Ring_Restart_Uart
+ 410              	.LVL29:
+ 223:Drivers/RingBuffer/Src/uartRingBufDMA.c **** 
+ 411              		.loc 1 223 1 is_stmt 0 view .LVU123
+ 412 005c BDE8F087 		pop	{r4, r5, r6, r7, r8, r9, r10, pc}
+ 413              	.LVL30:
+ 414              	.L30:
+ 203:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     }
+ 415              		.loc 1 203 9 is_stmt 1 view .LVU124
+ 203:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     }
+ 416              		.loc 1 203 16 is_stmt 0 view .LVU125
+ 417 0060 06F58066 		add	r6, r6, #1024
+ 418              	.LVL31:
+ 203:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     }
+ 419              		.loc 1 203 16 view .LVU126
+ 420 0064 D6E7     		b	.L25
+ 421              	.L26:
+ 214:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         Ring->Head = pos + Size;
+ 422              		.loc 1 214 9 is_stmt 1 view .LVU127
+ 214:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         Ring->Head = pos + Size;
+ 423              		.loc 1 214 16 is_stmt 0 view .LVU128
+ 424 0066 04F11400 		add	r0, r4, #20
+ 425              	.LVL32:
+ 214:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         Ring->Head = pos + Size;
+ 426              		.loc 1 214 9 view .LVU129
+ 427 006a 2A46     		mov	r2, r5
+ 428 006c 04F21441 		addw	r1, r4, #1044
+ 429              	.LVL33:
+ 214:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         Ring->Head = pos + Size;
+ 430              		.loc 1 214 9 view .LVU130
+ 431 0070 1844     		add	r0, r0, r3
+ 432 0072 FFF7FEFF 		bl	memcpy
+ 433              	.LVL34:
+ 215:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     }
+ 434              		.loc 1 215 9 is_stmt 1 view .LVU131
+ 215:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     }
+ 435              		.loc 1 215 20 is_stmt 0 view .LVU132
+ 436 0076 E760     		str	r7, [r4, #12]
+ 437 0078 E8E7     		b	.L27
+ 438              	.L32:
+ 439 007a 00BF     		.align	2
+ 440              	.L31:
+ 441 007c 00000000 		.word	.LANCHOR0
+ 442              		.cfi_endproc
+ 443              	.LFE79:
+ 445              		.section	.text.Get_Time,"ax",%progbits
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccvHVK4k.s 			page 14
+
+
+ 446              		.align	1
+ 447              		.global	Get_Time
+ 448              		.syntax unified
+ 449              		.thumb
+ 450              		.thumb_func
+ 452              	Get_Time:
+ 453              	.LFB81:
+ 235:Drivers/RingBuffer/Src/uartRingBufDMA.c **** 
+ 236:Drivers/RingBuffer/Src/uartRingBufDMA.c **** /**
+ 237:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  * @brief Get time in ms. Must be assign the get time function.
+ 238:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  * @retval uint32_t
+ 239:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  */
+ 240:Drivers/RingBuffer/Src/uartRingBufDMA.c **** uint32_t Get_Time() {
+ 454              		.loc 1 240 21 is_stmt 1 view -0
+ 455              		.cfi_startproc
+ 456              		@ args = 0, pretend = 0, frame = 0
+ 457              		@ frame_needed = 0, uses_anonymous_args = 0
+ 458 0000 08B5     		push	{r3, lr}
+ 459              	.LCFI4:
+ 460              		.cfi_def_cfa_offset 8
+ 461              		.cfi_offset 3, -8
+ 462              		.cfi_offset 14, -4
+ 241:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     if (RingBuffer->GetTime == NULL) {
+ 463              		.loc 1 241 5 view .LVU134
+ 464              		.loc 1 241 19 is_stmt 0 view .LVU135
+ 465 0002 044B     		ldr	r3, .L37
+ 466 0004 1B68     		ldr	r3, [r3]
+ 467 0006 D3F8083D 		ldr	r3, [r3, #3336]
+ 468              		.loc 1 241 8 view .LVU136
+ 469 000a 0BB1     		cbz	r3, .L35
+ 242:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         return 0;
+ 243:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     }
+ 244:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     return RingBuffer->GetTime();
+ 470              		.loc 1 244 5 is_stmt 1 view .LVU137
+ 471              		.loc 1 244 12 is_stmt 0 view .LVU138
+ 472 000c 9847     		blx	r3
+ 473              	.LVL35:
+ 474              	.L33:
+ 245:Drivers/RingBuffer/Src/uartRingBufDMA.c **** }
+ 475              		.loc 1 245 1 view .LVU139
+ 476 000e 08BD     		pop	{r3, pc}
+ 477              	.L35:
+ 242:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         return 0;
+ 478              		.loc 1 242 16 view .LVU140
+ 479 0010 0020     		movs	r0, #0
+ 480 0012 FCE7     		b	.L33
+ 481              	.L38:
+ 482              		.align	2
+ 483              	.L37:
+ 484 0014 00000000 		.word	.LANCHOR0
+ 485              		.cfi_endproc
+ 486              	.LFE81:
+ 488              		.section	.text.Ring_Increase_Tail,"ax",%progbits
+ 489              		.align	1
+ 490              		.global	Ring_Increase_Tail
+ 491              		.syntax unified
+ 492              		.thumb
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccvHVK4k.s 			page 15
+
+
+ 493              		.thumb_func
+ 495              	Ring_Increase_Tail:
+ 496              	.LVL36:
+ 497              	.LFB82:
+ 246:Drivers/RingBuffer/Src/uartRingBufDMA.c **** /**
+ 247:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  * @brief Increase the Tail.
+ 248:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  * @param Ring The pointer of the Ring.
+ 249:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  * @param Size The size to increase.
+ 250:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  * @param void
+ 251:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  */
+ 252:Drivers/RingBuffer/Src/uartRingBufDMA.c **** void Ring_Increase_Tail(RingHandler_t *Ring, uint16_t Size) {
+ 498              		.loc 1 252 61 is_stmt 1 view -0
+ 499              		.cfi_startproc
+ 500              		@ args = 0, pretend = 0, frame = 0
+ 501              		@ frame_needed = 0, uses_anonymous_args = 0
+ 502              		@ link register save eliminated.
+ 253:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     uint16_t Tail = Ring->Tail;
+ 503              		.loc 1 253 5 view .LVU142
+ 504              		.loc 1 253 25 is_stmt 0 view .LVU143
+ 505 0000 0269     		ldr	r2, [r0, #16]
+ 506              	.LVL37:
+ 254:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     if (Tail + Size >= RING_BUFFER_SIZE) {
+ 507              		.loc 1 254 5 is_stmt 1 view .LVU144
+ 508              		.loc 1 254 14 is_stmt 0 view .LVU145
+ 509 0002 93B2     		uxth	r3, r2
+ 510 0004 0B44     		add	r3, r3, r1
+ 511              		.loc 1 254 8 view .LVU146
+ 512 0006 B3F5806F 		cmp	r3, #1024
+ 513 000a 03DB     		blt	.L40
+ 255:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         Ring->Tail = Tail + Size - RING_BUFFER_SIZE;
+ 514              		.loc 1 255 9 is_stmt 1 view .LVU147
+ 515              		.loc 1 255 34 is_stmt 0 view .LVU148
+ 516 000c A3F58063 		sub	r3, r3, #1024
+ 517              		.loc 1 255 20 view .LVU149
+ 518 0010 0361     		str	r3, [r0, #16]
+ 519 0012 7047     		bx	lr
+ 520              	.L40:
+ 256:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     } else {
+ 257:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         Ring->Tail += Size;
+ 521              		.loc 1 257 9 is_stmt 1 view .LVU150
+ 522              		.loc 1 257 20 is_stmt 0 view .LVU151
+ 523 0014 1144     		add	r1, r1, r2
+ 524              	.LVL38:
+ 525              		.loc 1 257 20 view .LVU152
+ 526 0016 0161     		str	r1, [r0, #16]
+ 258:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     }
+ 259:Drivers/RingBuffer/Src/uartRingBufDMA.c **** }
+ 527              		.loc 1 259 1 view .LVU153
+ 528 0018 7047     		bx	lr
+ 529              		.cfi_endproc
+ 530              	.LFE82:
+ 532              		.section	.text.get_char,"ax",%progbits
+ 533              		.align	1
+ 534              		.global	get_char
+ 535              		.syntax unified
+ 536              		.thumb
+ 537              		.thumb_func
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccvHVK4k.s 			page 16
+
+
+ 539              	get_char:
+ 540              	.LVL39:
+ 541              	.LFB75:
+ 101:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     uint8_t retval = '\0';
+ 542              		.loc 1 101 46 is_stmt 1 view -0
+ 543              		.cfi_startproc
+ 544              		@ args = 0, pretend = 0, frame = 0
+ 545              		@ frame_needed = 0, uses_anonymous_args = 0
+ 101:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     uint8_t retval = '\0';
+ 546              		.loc 1 101 46 is_stmt 0 view .LVU155
+ 547 0000 10B5     		push	{r4, lr}
+ 548              	.LCFI5:
+ 549              		.cfi_def_cfa_offset 8
+ 550              		.cfi_offset 4, -8
+ 551              		.cfi_offset 14, -4
+ 102:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     uint16_t Tail = RingHandler->Tail;
+ 552              		.loc 1 102 5 is_stmt 1 view .LVU156
+ 553              	.LVL40:
+ 103:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     if (RingHandler->Head != Tail) {
+ 554              		.loc 1 103 5 view .LVU157
+ 104:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         retval = RingHandler->MainBuffer[Tail];
+ 555              		.loc 1 104 5 view .LVU158
+ 104:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         retval = RingHandler->MainBuffer[Tail];
+ 556              		.loc 1 104 20 is_stmt 0 view .LVU159
+ 557 0002 C268     		ldr	r2, [r0, #12]
+ 558 0004 038A     		ldrh	r3, [r0, #16]
+ 104:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         retval = RingHandler->MainBuffer[Tail];
+ 559              		.loc 1 104 8 view .LVU160
+ 560 0006 9A42     		cmp	r2, r3
+ 561 0008 02D1     		bne	.L46
+ 102:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     uint16_t Tail = RingHandler->Tail;
+ 562              		.loc 1 102 13 view .LVU161
+ 563 000a 0024     		movs	r4, #0
+ 564              	.LVL41:
+ 565              	.L43:
+ 109:Drivers/RingBuffer/Src/uartRingBufDMA.c **** }
+ 566              		.loc 1 109 5 is_stmt 1 view .LVU162
+ 110:Drivers/RingBuffer/Src/uartRingBufDMA.c **** 
+ 567              		.loc 1 110 1 is_stmt 0 view .LVU163
+ 568 000c 2046     		mov	r0, r4
+ 569 000e 10BD     		pop	{r4, pc}
+ 570              	.LVL42:
+ 571              	.L46:
+ 105:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         Ring_Increase_Tail(RingHandler, 1);
+ 572              		.loc 1 105 9 is_stmt 1 view .LVU164
+ 105:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         Ring_Increase_Tail(RingHandler, 1);
+ 573              		.loc 1 105 16 is_stmt 0 view .LVU165
+ 574 0010 0344     		add	r3, r3, r0
+ 575 0012 1C7D     		ldrb	r4, [r3, #20]	@ zero_extendqisi2
+ 576              	.LVL43:
+ 106:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     }
+ 577              		.loc 1 106 9 is_stmt 1 view .LVU166
+ 578 0014 0121     		movs	r1, #1
+ 579 0016 FFF7FEFF 		bl	Ring_Increase_Tail
+ 580              	.LVL44:
+ 106:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     }
+ 581              		.loc 1 106 9 is_stmt 0 view .LVU167
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccvHVK4k.s 			page 17
+
+
+ 582 001a F7E7     		b	.L43
+ 583              		.cfi_endproc
+ 584              	.LFE75:
+ 586              		.section	.text.Ring_Copy_Buffer,"ax",%progbits
+ 587              		.align	1
+ 588              		.global	Ring_Copy_Buffer
+ 589              		.syntax unified
+ 590              		.thumb
+ 591              		.thumb_func
+ 593              	Ring_Copy_Buffer:
+ 594              	.LVL45:
+ 595              	.LFB83:
+ 260:Drivers/RingBuffer/Src/uartRingBufDMA.c **** 
+ 261:Drivers/RingBuffer/Src/uartRingBufDMA.c **** /**
+ 262:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  * @brief Copy the main buffer to the user buffer.
+ 263:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  * @param Ring The pointer of the Ring Handler.
+ 264:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  * @param Buffer The pointer of the buffer.
+ 265:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  * @param Size The size to copy.
+ 266:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  * @retval void
+ 267:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  */
+ 268:Drivers/RingBuffer/Src/uartRingBufDMA.c **** void Ring_Copy_Buffer(RingHandler_t *Ring, uint8_t *Buffer, uint16_t Size) {
+ 596              		.loc 1 268 76 is_stmt 1 view -0
+ 597              		.cfi_startproc
+ 598              		@ args = 0, pretend = 0, frame = 0
+ 599              		@ frame_needed = 0, uses_anonymous_args = 0
+ 600              		.loc 1 268 76 is_stmt 0 view .LVU169
+ 601 0000 F8B5     		push	{r3, r4, r5, r6, r7, lr}
+ 602              	.LCFI6:
+ 603              		.cfi_def_cfa_offset 24
+ 604              		.cfi_offset 3, -24
+ 605              		.cfi_offset 4, -20
+ 606              		.cfi_offset 5, -16
+ 607              		.cfi_offset 6, -12
+ 608              		.cfi_offset 7, -8
+ 609              		.cfi_offset 14, -4
+ 610 0002 0446     		mov	r4, r0
+ 611 0004 0E46     		mov	r6, r1
+ 612 0006 1546     		mov	r5, r2
+ 269:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     uint16_t Tail = Ring->Tail;
+ 613              		.loc 1 269 5 is_stmt 1 view .LVU170
+ 614              		.loc 1 269 25 is_stmt 0 view .LVU171
+ 615 0008 0369     		ldr	r3, [r0, #16]
+ 616              		.loc 1 269 14 view .LVU172
+ 617 000a 9FB2     		uxth	r7, r3
+ 618              	.LVL46:
+ 270:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     uint16_t Remain = RING_BUFFER_SIZE - Tail;
+ 619              		.loc 1 270 5 is_stmt 1 view .LVU173
+ 620              		.loc 1 270 14 is_stmt 0 view .LVU174
+ 621 000c C7F58067 		rsb	r7, r7, #1024
+ 622              	.LVL47:
+ 623              		.loc 1 270 14 view .LVU175
+ 624 0010 BFB2     		uxth	r7, r7
+ 625              	.LVL48:
+ 271:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     if (Size > Remain) {
+ 626              		.loc 1 271 5 is_stmt 1 view .LVU176
+ 627              		.loc 1 271 8 is_stmt 0 view .LVU177
+ 628 0012 9742     		cmp	r7, r2
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccvHVK4k.s 			page 18
+
+
+ 629 0014 0ED2     		bcs	.L48
+ 272:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         memcpy(Buffer, (const void *)&Ring->MainBuffer[Tail], Remain);
+ 630              		.loc 1 272 9 is_stmt 1 view .LVU178
+ 631              		.loc 1 272 38 is_stmt 0 view .LVU179
+ 632 0016 9BB2     		uxth	r3, r3
+ 633              		.loc 1 272 38 view .LVU180
+ 634 0018 1033     		adds	r3, r3, #16
+ 635              	.LVL49:
+ 636              		.loc 1 272 38 view .LVU181
+ 637 001a 0344     		add	r3, r3, r0
+ 638              	.LVL50:
+ 639              		.loc 1 272 9 view .LVU182
+ 640 001c 3A46     		mov	r2, r7
+ 641              	.LVL51:
+ 642              		.loc 1 272 9 view .LVU183
+ 643 001e 191D     		adds	r1, r3, #4
+ 644              	.LVL52:
+ 645              		.loc 1 272 9 view .LVU184
+ 646 0020 3046     		mov	r0, r6
+ 647              	.LVL53:
+ 648              		.loc 1 272 9 view .LVU185
+ 649 0022 FFF7FEFF 		bl	memcpy
+ 650              	.LVL54:
+ 273:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         memcpy(Buffer + Remain, (const void *)Ring->MainBuffer, Size - Remain);
+ 651              		.loc 1 273 9 is_stmt 1 view .LVU186
+ 652 0026 EA1B     		subs	r2, r5, r7
+ 653 0028 04F11401 		add	r1, r4, #20
+ 654 002c F019     		adds	r0, r6, r7
+ 655 002e FFF7FEFF 		bl	memcpy
+ 656              	.LVL55:
+ 657              	.L47:
+ 274:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     } else {
+ 275:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         memcpy(Buffer, (const void *)&Ring->MainBuffer[Tail], Size);
+ 276:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     }
+ 277:Drivers/RingBuffer/Src/uartRingBufDMA.c **** }
+ 658              		.loc 1 277 1 is_stmt 0 view .LVU187
+ 659 0032 F8BD     		pop	{r3, r4, r5, r6, r7, pc}
+ 660              	.LVL56:
+ 661              	.L48:
+ 275:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     }
+ 662              		.loc 1 275 9 is_stmt 1 view .LVU188
+ 275:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     }
+ 663              		.loc 1 275 38 is_stmt 0 view .LVU189
+ 664 0034 9BB2     		uxth	r3, r3
+ 275:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     }
+ 665              		.loc 1 275 38 view .LVU190
+ 666 0036 1033     		adds	r3, r3, #16
+ 667              	.LVL57:
+ 275:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     }
+ 668              		.loc 1 275 38 view .LVU191
+ 669 0038 C118     		adds	r1, r0, r3
+ 670              	.LVL58:
+ 275:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     }
+ 671              		.loc 1 275 9 view .LVU192
+ 672 003a 0431     		adds	r1, r1, #4
+ 673 003c 3046     		mov	r0, r6
+ 674              	.LVL59:
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccvHVK4k.s 			page 19
+
+
+ 275:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     }
+ 675              		.loc 1 275 9 view .LVU193
+ 676 003e FFF7FEFF 		bl	memcpy
+ 677              	.LVL60:
+ 678              		.loc 1 277 1 view .LVU194
+ 679 0042 F6E7     		b	.L47
+ 680              		.cfi_endproc
+ 681              	.LFE83:
+ 683              		.section	.text.get_peek,"ax",%progbits
+ 684              		.align	1
+ 685              		.global	get_peek
+ 686              		.syntax unified
+ 687              		.thumb
+ 688              		.thumb_func
+ 690              	get_peek:
+ 691              	.LVL61:
+ 692              	.LFB77:
+ 136:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     int available = Is_available(RingHandler);
+ 693              		.loc 1 136 74 is_stmt 1 view -0
+ 694              		.cfi_startproc
+ 695              		@ args = 0, pretend = 0, frame = 0
+ 696              		@ frame_needed = 0, uses_anonymous_args = 0
+ 136:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     int available = Is_available(RingHandler);
+ 697              		.loc 1 136 74 is_stmt 0 view .LVU196
+ 698 0000 F8B5     		push	{r3, r4, r5, r6, r7, lr}
+ 699              	.LCFI7:
+ 700              		.cfi_def_cfa_offset 24
+ 701              		.cfi_offset 3, -24
+ 702              		.cfi_offset 4, -20
+ 703              		.cfi_offset 5, -16
+ 704              		.cfi_offset 6, -12
+ 705              		.cfi_offset 7, -8
+ 706              		.cfi_offset 14, -4
+ 707 0002 0646     		mov	r6, r0
+ 708 0004 0F46     		mov	r7, r1
+ 709 0006 1546     		mov	r5, r2
+ 137:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     int DataToRead = Size;
+ 710              		.loc 1 137 5 is_stmt 1 view .LVU197
+ 137:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     int DataToRead = Size;
+ 711              		.loc 1 137 21 is_stmt 0 view .LVU198
+ 712 0008 FFF7FEFF 		bl	Is_available
+ 713              	.LVL62:
+ 137:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     int DataToRead = Size;
+ 714              		.loc 1 137 21 view .LVU199
+ 715 000c 0446     		mov	r4, r0
+ 716              	.LVL63:
+ 138:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     if (Size > available) {
+ 717              		.loc 1 138 5 is_stmt 1 view .LVU200
+ 139:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         DataToRead = available;
+ 718              		.loc 1 139 5 view .LVU201
+ 139:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         DataToRead = available;
+ 719              		.loc 1 139 8 is_stmt 0 view .LVU202
+ 720 000e A842     		cmp	r0, r5
+ 721 0010 00DB     		blt	.L52
+ 138:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     if (Size > available) {
+ 722              		.loc 1 138 9 view .LVU203
+ 723 0012 2C46     		mov	r4, r5
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccvHVK4k.s 			page 20
+
+
+ 724              	.L52:
+ 725              	.LVL64:
+ 142:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     return DataToRead;
+ 726              		.loc 1 142 5 is_stmt 1 view .LVU204
+ 727 0014 A2B2     		uxth	r2, r4
+ 728 0016 3946     		mov	r1, r7
+ 729 0018 3046     		mov	r0, r6
+ 730              	.LVL65:
+ 142:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     return DataToRead;
+ 731              		.loc 1 142 5 is_stmt 0 view .LVU205
+ 732 001a FFF7FEFF 		bl	Ring_Copy_Buffer
+ 733              	.LVL66:
+ 143:Drivers/RingBuffer/Src/uartRingBufDMA.c **** }
+ 734              		.loc 1 143 5 is_stmt 1 view .LVU206
+ 144:Drivers/RingBuffer/Src/uartRingBufDMA.c **** 
+ 735              		.loc 1 144 1 is_stmt 0 view .LVU207
+ 736 001e 2046     		mov	r0, r4
+ 737 0020 F8BD     		pop	{r3, r4, r5, r6, r7, pc}
+ 144:Drivers/RingBuffer/Src/uartRingBufDMA.c **** 
+ 738              		.loc 1 144 1 view .LVU208
+ 739              		.cfi_endproc
+ 740              	.LFE77:
+ 742              		.section	.text.get_string,"ax",%progbits
+ 743              		.align	1
+ 744              		.global	get_string
+ 745              		.syntax unified
+ 746              		.thumb
+ 747              		.thumb_func
+ 749              	get_string:
+ 750              	.LVL67:
+ 751              	.LFB76:
+ 121:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     int DataCanRead = get_peek(RingHandler, Buffer, Size);
+ 752              		.loc 1 121 76 is_stmt 1 view -0
+ 753              		.cfi_startproc
+ 754              		@ args = 0, pretend = 0, frame = 0
+ 755              		@ frame_needed = 0, uses_anonymous_args = 0
+ 121:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     int DataCanRead = get_peek(RingHandler, Buffer, Size);
+ 756              		.loc 1 121 76 is_stmt 0 view .LVU210
+ 757 0000 38B5     		push	{r3, r4, r5, lr}
+ 758              	.LCFI8:
+ 759              		.cfi_def_cfa_offset 16
+ 760              		.cfi_offset 3, -16
+ 761              		.cfi_offset 4, -12
+ 762              		.cfi_offset 5, -8
+ 763              		.cfi_offset 14, -4
+ 764 0002 0446     		mov	r4, r0
+ 122:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     if (DataCanRead != 0) {
+ 765              		.loc 1 122 5 is_stmt 1 view .LVU211
+ 122:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     if (DataCanRead != 0) {
+ 766              		.loc 1 122 23 is_stmt 0 view .LVU212
+ 767 0004 FFF7FEFF 		bl	get_peek
+ 768              	.LVL68:
+ 123:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         Ring_Increase_Tail(RingHandler, DataCanRead);
+ 769              		.loc 1 123 5 is_stmt 1 view .LVU213
+ 123:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         Ring_Increase_Tail(RingHandler, DataCanRead);
+ 770              		.loc 1 123 8 is_stmt 0 view .LVU214
+ 771 0008 0546     		mov	r5, r0
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccvHVK4k.s 			page 21
+
+
+ 772 000a 08B9     		cbnz	r0, .L57
+ 773              	.LVL69:
+ 774              	.L54:
+ 127:Drivers/RingBuffer/Src/uartRingBufDMA.c **** 
+ 775              		.loc 1 127 1 view .LVU215
+ 776 000c 2846     		mov	r0, r5
+ 777 000e 38BD     		pop	{r3, r4, r5, pc}
+ 778              	.LVL70:
+ 779              	.L57:
+ 124:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     }
+ 780              		.loc 1 124 9 is_stmt 1 view .LVU216
+ 781 0010 81B2     		uxth	r1, r0
+ 782 0012 2046     		mov	r0, r4
+ 783              	.LVL71:
+ 124:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     }
+ 784              		.loc 1 124 9 is_stmt 0 view .LVU217
+ 785 0014 FFF7FEFF 		bl	Ring_Increase_Tail
+ 786              	.LVL72:
+ 126:Drivers/RingBuffer/Src/uartRingBufDMA.c **** }
+ 787              		.loc 1 126 5 is_stmt 1 view .LVU218
+ 126:Drivers/RingBuffer/Src/uartRingBufDMA.c **** }
+ 788              		.loc 1 126 12 is_stmt 0 view .LVU219
+ 789 0018 F8E7     		b	.L54
+ 790              		.cfi_endproc
+ 791              	.LFE76:
+ 793              		.section	.text.IndexOf,"ax",%progbits
+ 794              		.align	1
+ 795              		.global	IndexOf
+ 796              		.syntax unified
+ 797              		.thumb
+ 798              		.thumb_func
+ 800              	IndexOf:
+ 801              	.LVL73:
+ 802              	.LFB84:
+ 278:Drivers/RingBuffer/Src/uartRingBufDMA.c **** 
+ 279:Drivers/RingBuffer/Src/uartRingBufDMA.c **** /**
+ 280:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  * @brief Calculate the Index of the character.
+ 281:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  * @param Buffer The pointer of the buffer.
+ 282:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  * @param Chr The char to find.
+ 283:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  * @param Size The size of the buffer to find.
+ 284:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  * @retval int The position of the Character.
+ 285:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  */
+ 286:Drivers/RingBuffer/Src/uartRingBufDMA.c **** int IndexOf(uint8_t *Buffer, char Chr, size_t Size) {
+ 803              		.loc 1 286 53 is_stmt 1 view -0
+ 804              		.cfi_startproc
+ 805              		@ args = 0, pretend = 0, frame = 0
+ 806              		@ frame_needed = 0, uses_anonymous_args = 0
+ 807              		.loc 1 286 53 is_stmt 0 view .LVU221
+ 808 0000 10B5     		push	{r4, lr}
+ 809              	.LCFI9:
+ 810              		.cfi_def_cfa_offset 8
+ 811              		.cfi_offset 4, -8
+ 812              		.cfi_offset 14, -4
+ 813 0002 0446     		mov	r4, r0
+ 287:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     int Index = -1;
+ 814              		.loc 1 287 5 is_stmt 1 view .LVU222
+ 815              	.LVL74:
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccvHVK4k.s 			page 22
+
+
+ 288:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     void *Result = memchr((const void *)Buffer, Chr, Size);
+ 816              		.loc 1 288 5 view .LVU223
+ 817              		.loc 1 288 20 is_stmt 0 view .LVU224
+ 818 0004 FFF7FEFF 		bl	memchr
+ 819              	.LVL75:
+ 289:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     if (Result == NULL) {
+ 820              		.loc 1 289 5 is_stmt 1 view .LVU225
+ 821              		.loc 1 289 8 is_stmt 0 view .LVU226
+ 822 0008 08B1     		cbz	r0, .L60
+ 290:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         return -1;
+ 291:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     }
+ 292:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     Index = Result - (void *)Buffer;
+ 823              		.loc 1 292 5 is_stmt 1 view .LVU227
+ 824              		.loc 1 292 11 is_stmt 0 view .LVU228
+ 825 000a 001B     		subs	r0, r0, r4
+ 826              	.LVL76:
+ 293:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     return Index;
+ 827              		.loc 1 293 5 is_stmt 1 view .LVU229
+ 828              	.L58:
+ 294:Drivers/RingBuffer/Src/uartRingBufDMA.c **** }
+ 829              		.loc 1 294 1 is_stmt 0 view .LVU230
+ 830 000c 10BD     		pop	{r4, pc}
+ 831              	.LVL77:
+ 832              	.L60:
+ 290:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         return -1;
+ 833              		.loc 1 290 16 view .LVU231
+ 834 000e 4FF0FF30 		mov	r0, #-1
+ 835              	.LVL78:
+ 290:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         return -1;
+ 836              		.loc 1 290 16 view .LVU232
+ 837 0012 FBE7     		b	.L58
+ 838              		.cfi_endproc
+ 839              	.LFE84:
+ 841              		.section	.text.Detect_Char,"ax",%progbits
+ 842              		.align	1
+ 843              		.global	Detect_Char
+ 844              		.syntax unified
+ 845              		.thumb
+ 846              		.thumb_func
+ 848              	Detect_Char:
+ 849              	.LVL79:
+ 850              	.LFB73:
+  61:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     bool retval = false;
+ 851              		.loc 1 61 63 is_stmt 1 view -0
+ 852              		.cfi_startproc
+ 853              		@ args = 0, pretend = 0, frame = 0
+ 854              		@ frame_needed = 0, uses_anonymous_args = 0
+  61:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     bool retval = false;
+ 855              		.loc 1 61 63 is_stmt 0 view .LVU234
+ 856 0000 F8B5     		push	{r3, r4, r5, r6, r7, lr}
+ 857              	.LCFI10:
+ 858              		.cfi_def_cfa_offset 24
+ 859              		.cfi_offset 3, -24
+ 860              		.cfi_offset 4, -20
+ 861              		.cfi_offset 5, -16
+ 862              		.cfi_offset 6, -12
+ 863              		.cfi_offset 7, -8
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccvHVK4k.s 			page 23
+
+
+ 864              		.cfi_offset 14, -4
+ 865 0002 0646     		mov	r6, r0
+ 866 0004 0D46     		mov	r5, r1
+  62:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     uint8_t *Temp = NULL;
+ 867              		.loc 1 62 5 is_stmt 1 view .LVU235
+ 868              	.LVL80:
+  63:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     int Availabe;
+ 869              		.loc 1 63 5 view .LVU236
+  64:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     Availabe = Is_available(RingHandler);
+ 870              		.loc 1 64 5 view .LVU237
+  65:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     if (Availabe > 0) {
+ 871              		.loc 1 65 5 view .LVU238
+  65:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     if (Availabe > 0) {
+ 872              		.loc 1 65 16 is_stmt 0 view .LVU239
+ 873 0006 FFF7FEFF 		bl	Is_available
+ 874              	.LVL81:
+  66:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         Temp = malloc(RING_BUFFER_SIZE);
+ 875              		.loc 1 66 5 is_stmt 1 view .LVU240
+  66:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         Temp = malloc(RING_BUFFER_SIZE);
+ 876              		.loc 1 66 8 is_stmt 0 view .LVU241
+ 877 000a 041E     		subs	r4, r0, #0
+ 878 000c 02DC     		bgt	.L69
+  62:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     uint8_t *Temp = NULL;
+ 879              		.loc 1 62 10 view .LVU242
+ 880 000e 0024     		movs	r4, #0
+ 881              	.LVL82:
+ 882              	.L63:
+  77:Drivers/RingBuffer/Src/uartRingBufDMA.c **** 
+ 883              		.loc 1 77 1 view .LVU243
+ 884 0010 2046     		mov	r0, r4
+ 885 0012 F8BD     		pop	{r3, r4, r5, r6, r7, pc}
+ 886              	.LVL83:
+ 887              	.L69:
+ 888              	.LBB3:
+  67:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         if (Temp == NULL) return -1;
+ 889              		.loc 1 67 9 is_stmt 1 view .LVU244
+  67:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         if (Temp == NULL) return -1;
+ 890              		.loc 1 67 16 is_stmt 0 view .LVU245
+ 891 0014 4FF48060 		mov	r0, #1024
+ 892              	.LVL84:
+  67:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         if (Temp == NULL) return -1;
+ 893              		.loc 1 67 16 view .LVU246
+ 894 0018 FFF7FEFF 		bl	malloc
+ 895              	.LVL85:
+  68:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         get_peek(RingHandler, Temp, Availabe);
+ 896              		.loc 1 68 9 is_stmt 1 view .LVU247
+  68:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         get_peek(RingHandler, Temp, Availabe);
+ 897              		.loc 1 68 12 is_stmt 0 view .LVU248
+ 898 001c 0746     		mov	r7, r0
+ 899 001e 98B1     		cbz	r0, .L66
+  69:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         int Index = IndexOf(Temp, Deli, Availabe);
+ 900              		.loc 1 69 9 is_stmt 1 view .LVU249
+ 901 0020 A2B2     		uxth	r2, r4
+ 902 0022 0146     		mov	r1, r0
+ 903 0024 3046     		mov	r0, r6
+ 904              	.LVL86:
+  69:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         int Index = IndexOf(Temp, Deli, Availabe);
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccvHVK4k.s 			page 24
+
+
+ 905              		.loc 1 69 9 is_stmt 0 view .LVU250
+ 906 0026 FFF7FEFF 		bl	get_peek
+ 907              	.LVL87:
+  70:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         if(Index != -1) {
+ 908              		.loc 1 70 9 is_stmt 1 view .LVU251
+  70:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         if(Index != -1) {
+ 909              		.loc 1 70 21 is_stmt 0 view .LVU252
+ 910 002a 2246     		mov	r2, r4
+ 911 002c 2946     		mov	r1, r5
+ 912 002e 3846     		mov	r0, r7
+ 913 0030 FFF7FEFF 		bl	IndexOf
+ 914              	.LVL88:
+  71:Drivers/RingBuffer/Src/uartRingBufDMA.c ****             retval = true;
+ 915              		.loc 1 71 9 is_stmt 1 view .LVU253
+  71:Drivers/RingBuffer/Src/uartRingBufDMA.c ****             retval = true;
+ 916              		.loc 1 71 11 is_stmt 0 view .LVU254
+ 917 0034 B0F1FF3F 		cmp	r0, #-1
+ 918 0038 04D0     		beq	.L70
+  72:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         }
+ 919              		.loc 1 72 20 view .LVU255
+ 920 003a 0124     		movs	r4, #1
+ 921              	.LVL89:
+ 922              	.L64:
+  74:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     }
+ 923              		.loc 1 74 9 is_stmt 1 view .LVU256
+ 924 003c 3846     		mov	r0, r7
+ 925              	.LVL90:
+  74:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     }
+ 926              		.loc 1 74 9 is_stmt 0 view .LVU257
+ 927 003e FFF7FEFF 		bl	free
+ 928              	.LVL91:
+ 929 0042 E5E7     		b	.L63
+ 930              	.LVL92:
+ 931              	.L70:
+  74:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     }
+ 932              		.loc 1 74 9 view .LVU258
+ 933              	.LBE3:
+  62:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     uint8_t *Temp = NULL;
+ 934              		.loc 1 62 10 view .LVU259
+ 935 0044 0024     		movs	r4, #0
+ 936              	.LVL93:
+  62:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     uint8_t *Temp = NULL;
+ 937              		.loc 1 62 10 view .LVU260
+ 938 0046 F9E7     		b	.L64
+ 939              	.LVL94:
+ 940              	.L66:
+ 941              	.LBB4:
+  68:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         get_peek(RingHandler, Temp, Availabe);
+ 942              		.loc 1 68 34 view .LVU261
+ 943 0048 0124     		movs	r4, #1
+ 944              	.LVL95:
+  68:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         get_peek(RingHandler, Temp, Availabe);
+ 945              		.loc 1 68 34 view .LVU262
+ 946 004a E1E7     		b	.L63
+ 947              	.LBE4:
+ 948              		.cfi_endproc
+ 949              	.LFE73:
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccvHVK4k.s 			page 25
+
+
+ 951              		.section	.text.IndexOfString,"ax",%progbits
+ 952              		.align	1
+ 953              		.global	IndexOfString
+ 954              		.syntax unified
+ 955              		.thumb
+ 956              		.thumb_func
+ 958              	IndexOfString:
+ 959              	.LVL96:
+ 960              	.LFB85:
+ 295:Drivers/RingBuffer/Src/uartRingBufDMA.c **** 
+ 296:Drivers/RingBuffer/Src/uartRingBufDMA.c **** /**
+ 297:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  * @brief Calculate the Index of the string.
+ 298:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  * @note Must be confirm the buffer finish with the '\0' char.
+ 299:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  * @param Buffer The pointer of the buffer.
+ 300:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  * @param Chr The char to find.
+ 301:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  * @retval int The position of the Character.
+ 302:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  */
+ 303:Drivers/RingBuffer/Src/uartRingBufDMA.c **** int IndexOfString(uint8_t *Buffer, char Chr) {
+ 961              		.loc 1 303 46 is_stmt 1 view -0
+ 962              		.cfi_startproc
+ 963              		@ args = 0, pretend = 0, frame = 0
+ 964              		@ frame_needed = 0, uses_anonymous_args = 0
+ 965              		.loc 1 303 46 is_stmt 0 view .LVU264
+ 966 0000 38B5     		push	{r3, r4, r5, lr}
+ 967              	.LCFI11:
+ 968              		.cfi_def_cfa_offset 16
+ 969              		.cfi_offset 3, -16
+ 970              		.cfi_offset 4, -12
+ 971              		.cfi_offset 5, -8
+ 972              		.cfi_offset 14, -4
+ 973 0002 0446     		mov	r4, r0
+ 974 0004 0D46     		mov	r5, r1
+ 304:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     int Index = IndexOf(Buffer, Chr, strlen((const char *)Buffer));
+ 975              		.loc 1 304 5 is_stmt 1 view .LVU265
+ 976              		.loc 1 304 17 is_stmt 0 view .LVU266
+ 977 0006 FFF7FEFF 		bl	strlen
+ 978              	.LVL97:
+ 979              		.loc 1 304 17 view .LVU267
+ 980 000a 0246     		mov	r2, r0
+ 981 000c 2946     		mov	r1, r5
+ 982 000e 2046     		mov	r0, r4
+ 983 0010 FFF7FEFF 		bl	IndexOf
+ 984              	.LVL98:
+ 305:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     return Index;
+ 985              		.loc 1 305 5 is_stmt 1 view .LVU268
+ 306:Drivers/RingBuffer/Src/uartRingBufDMA.c **** }
+ 986              		.loc 1 306 1 is_stmt 0 view .LVU269
+ 987 0014 38BD     		pop	{r3, r4, r5, pc}
+ 988              		.loc 1 306 1 view .LVU270
+ 989              		.cfi_endproc
+ 990              	.LFE85:
+ 992              		.section	.text.Get_String_Util,"ax",%progbits
+ 993              		.align	1
+ 994              		.global	Get_String_Util
+ 995              		.syntax unified
+ 996              		.thumb
+ 997              		.thumb_func
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccvHVK4k.s 			page 26
+
+
+ 999              	Get_String_Util:
+ 1000              	.LVL99:
+ 1001              	.LFB86:
+ 307:Drivers/RingBuffer/Src/uartRingBufDMA.c **** 
+ 308:Drivers/RingBuffer/Src/uartRingBufDMA.c **** /**
+ 309:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  * @brief Get the String with the specific termante.
+ 310:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  * @param Buffer The pointer to the buffer.
+ 311:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  * @param Source The pointer of the Source.
+ 312:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  * @param Terminate The terminate character.
+ 313:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  * @param Size The size of the buffer.
+ 314:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  * @retval int The length of the string. Return -1 when can not find the
+ 315:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  * termanated.
+ 316:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  */
+ 317:Drivers/RingBuffer/Src/uartRingBufDMA.c **** int Get_String_Util(uint8_t *Buffer, uint8_t *Source, const char Terminate,
+ 318:Drivers/RingBuffer/Src/uartRingBufDMA.c ****                     size_t Size) {
+ 1002              		.loc 1 318 34 is_stmt 1 view -0
+ 1003              		.cfi_startproc
+ 1004              		@ args = 0, pretend = 0, frame = 0
+ 1005              		@ frame_needed = 0, uses_anonymous_args = 0
+ 1006              		.loc 1 318 34 is_stmt 0 view .LVU272
+ 1007 0000 70B5     		push	{r4, r5, r6, lr}
+ 1008              	.LCFI12:
+ 1009              		.cfi_def_cfa_offset 16
+ 1010              		.cfi_offset 4, -16
+ 1011              		.cfi_offset 5, -12
+ 1012              		.cfi_offset 6, -8
+ 1013              		.cfi_offset 14, -4
+ 1014 0002 0646     		mov	r6, r0
+ 1015 0004 0D46     		mov	r5, r1
+ 1016 0006 1146     		mov	r1, r2
+ 1017              	.LVL100:
+ 319:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     int Index = IndexOf(Source, Terminate, Size);
+ 1018              		.loc 1 319 5 is_stmt 1 view .LVU273
+ 1019              		.loc 1 319 17 is_stmt 0 view .LVU274
+ 1020 0008 1A46     		mov	r2, r3
+ 1021              	.LVL101:
+ 1022              		.loc 1 319 17 view .LVU275
+ 1023 000a 2846     		mov	r0, r5
+ 1024              	.LVL102:
+ 1025              		.loc 1 319 17 view .LVU276
+ 1026 000c FFF7FEFF 		bl	IndexOf
+ 1027              	.LVL103:
+ 320:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     if (Index > 0) {
+ 1028              		.loc 1 320 5 is_stmt 1 view .LVU277
+ 1029              		.loc 1 320 8 is_stmt 0 view .LVU278
+ 1030 0010 041E     		subs	r4, r0, #0
+ 1031 0012 01DC     		bgt	.L76
+ 1032              	.LVL104:
+ 1033              	.L73:
+ 321:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         memset(Buffer + Index, '\0', 1);
+ 322:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         memcpy(Buffer, Source, Index);
+ 323:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     }
+ 324:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     return Index;
+ 325:Drivers/RingBuffer/Src/uartRingBufDMA.c **** }
+ 1034              		.loc 1 325 1 view .LVU279
+ 1035 0014 2046     		mov	r0, r4
+ 1036 0016 70BD     		pop	{r4, r5, r6, pc}
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccvHVK4k.s 			page 27
+
+
+ 1037              	.LVL105:
+ 1038              	.L76:
+ 321:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         memset(Buffer + Index, '\0', 1);
+ 1039              		.loc 1 321 9 is_stmt 1 view .LVU280
+ 1040 0018 0023     		movs	r3, #0
+ 1041 001a 3355     		strb	r3, [r6, r4]
+ 322:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     }
+ 1042              		.loc 1 322 9 view .LVU281
+ 1043 001c 2246     		mov	r2, r4
+ 1044 001e 2946     		mov	r1, r5
+ 1045 0020 3046     		mov	r0, r6
+ 1046              	.LVL106:
+ 322:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     }
+ 1047              		.loc 1 322 9 is_stmt 0 view .LVU282
+ 1048 0022 FFF7FEFF 		bl	memcpy
+ 1049              	.LVL107:
+ 324:Drivers/RingBuffer/Src/uartRingBufDMA.c **** }
+ 1050              		.loc 1 324 5 is_stmt 1 view .LVU283
+ 324:Drivers/RingBuffer/Src/uartRingBufDMA.c **** }
+ 1051              		.loc 1 324 12 is_stmt 0 view .LVU284
+ 1052 0026 F5E7     		b	.L73
+ 1053              		.cfi_endproc
+ 1054              	.LFE86:
+ 1056              		.section	.text.Get_String_NonBlocking,"ax",%progbits
+ 1057              		.align	1
+ 1058              		.global	Get_String_NonBlocking
+ 1059              		.syntax unified
+ 1060              		.thumb
+ 1061              		.thumb_func
+ 1063              	Get_String_NonBlocking:
+ 1064              	.LVL108:
+ 1065              	.LFB87:
+ 326:Drivers/RingBuffer/Src/uartRingBufDMA.c **** 
+ 327:Drivers/RingBuffer/Src/uartRingBufDMA.c **** /**
+ 328:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  * @brief Get the string contains the terminate character with Blocking.
+ 329:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  * @param Ring The Ring Handler.
+ 330:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  * @param Buffer The reading buffer.
+ 331:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  * @param Terminate The terminated character.
+ 332:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  * @retval int The length of the string was read. -1 meant timeout or Error.
+ 333:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  */
+ 334:Drivers/RingBuffer/Src/uartRingBufDMA.c **** int Get_String_NonBlocking(RingHandler_t *Ring, uint8_t *Buffer,
+ 335:Drivers/RingBuffer/Src/uartRingBufDMA.c ****                            const char Terminate) {
+ 1066              		.loc 1 335 50 is_stmt 1 view -0
+ 1067              		.cfi_startproc
+ 1068              		@ args = 0, pretend = 0, frame = 0
+ 1069              		@ frame_needed = 0, uses_anonymous_args = 0
+ 1070              		.loc 1 335 50 is_stmt 0 view .LVU286
+ 1071 0000 2DE9F041 		push	{r4, r5, r6, r7, r8, lr}
+ 1072              	.LCFI13:
+ 1073              		.cfi_def_cfa_offset 24
+ 1074              		.cfi_offset 4, -24
+ 1075              		.cfi_offset 5, -20
+ 1076              		.cfi_offset 6, -16
+ 1077              		.cfi_offset 7, -12
+ 1078              		.cfi_offset 8, -8
+ 1079              		.cfi_offset 14, -4
+ 1080 0004 0446     		mov	r4, r0
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccvHVK4k.s 			page 28
+
+
+ 1081 0006 0E46     		mov	r6, r1
+ 1082 0008 1746     		mov	r7, r2
+ 336:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     uint8_t *Temp = NULL;
+ 1083              		.loc 1 336 5 is_stmt 1 view .LVU287
+ 1084              	.LVL109:
+ 337:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     int Length = -1;
+ 1085              		.loc 1 337 5 view .LVU288
+ 338:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     int Availabe;
+ 1086              		.loc 1 338 5 view .LVU289
+ 339:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     Temp = malloc(RING_BUFFER_SIZE);
+ 1087              		.loc 1 339 5 view .LVU290
+ 1088              		.loc 1 339 12 is_stmt 0 view .LVU291
+ 1089 000a 4FF48060 		mov	r0, #1024
+ 1090              	.LVL110:
+ 1091              		.loc 1 339 12 view .LVU292
+ 1092 000e FFF7FEFF 		bl	malloc
+ 1093              	.LVL111:
+ 340:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     if (Temp == NULL) return -1;
+ 1094              		.loc 1 340 5 is_stmt 1 view .LVU293
+ 1095              		.loc 1 340 8 is_stmt 0 view .LVU294
+ 1096 0012 F8B1     		cbz	r0, .L80
+ 1097 0014 8046     		mov	r8, r0
+ 341:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     Availabe = Is_available(Ring);
+ 1098              		.loc 1 341 5 is_stmt 1 view .LVU295
+ 1099              		.loc 1 341 16 is_stmt 0 view .LVU296
+ 1100 0016 2046     		mov	r0, r4
+ 1101              	.LVL112:
+ 1102              		.loc 1 341 16 view .LVU297
+ 1103 0018 FFF7FEFF 		bl	Is_available
+ 1104              	.LVL113:
+ 342:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     if (Availabe > 0) {
+ 1105              		.loc 1 342 5 is_stmt 1 view .LVU298
+ 1106              		.loc 1 342 8 is_stmt 0 view .LVU299
+ 1107 001c 051E     		subs	r5, r0, #0
+ 1108 001e 07DC     		bgt	.L83
+ 337:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     int Availabe;
+ 1109              		.loc 1 337 9 view .LVU300
+ 1110 0020 4FF0FF35 		mov	r5, #-1
+ 1111              	.LVL114:
+ 1112              	.L79:
+ 343:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         get_peek(Ring, Temp, Availabe);
+ 344:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         Length = Get_String_Util(Buffer, Temp, Terminate, Availabe);
+ 345:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         Ring_Increase_Tail(Ring, Length + 1);
+ 346:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     }
+ 347:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     free(Temp);
+ 1113              		.loc 1 347 5 is_stmt 1 view .LVU301
+ 1114 0024 4046     		mov	r0, r8
+ 1115 0026 FFF7FEFF 		bl	free
+ 1116              	.LVL115:
+ 348:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     return Length;
+ 1117              		.loc 1 348 5 view .LVU302
+ 1118              	.L77:
+ 349:Drivers/RingBuffer/Src/uartRingBufDMA.c **** }
+ 1119              		.loc 1 349 1 is_stmt 0 view .LVU303
+ 1120 002a 2846     		mov	r0, r5
+ 1121 002c BDE8F081 		pop	{r4, r5, r6, r7, r8, pc}
+ 1122              	.LVL116:
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccvHVK4k.s 			page 29
+
+
+ 1123              	.L83:
+ 343:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         get_peek(Ring, Temp, Availabe);
+ 1124              		.loc 1 343 9 is_stmt 1 view .LVU304
+ 1125 0030 AAB2     		uxth	r2, r5
+ 1126 0032 4146     		mov	r1, r8
+ 1127 0034 2046     		mov	r0, r4
+ 1128              	.LVL117:
+ 343:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         get_peek(Ring, Temp, Availabe);
+ 1129              		.loc 1 343 9 is_stmt 0 view .LVU305
+ 1130 0036 FFF7FEFF 		bl	get_peek
+ 1131              	.LVL118:
+ 344:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         Ring_Increase_Tail(Ring, Length + 1);
+ 1132              		.loc 1 344 9 is_stmt 1 view .LVU306
+ 344:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         Ring_Increase_Tail(Ring, Length + 1);
+ 1133              		.loc 1 344 18 is_stmt 0 view .LVU307
+ 1134 003a 2B46     		mov	r3, r5
+ 1135 003c 3A46     		mov	r2, r7
+ 1136 003e 4146     		mov	r1, r8
+ 1137 0040 3046     		mov	r0, r6
+ 1138 0042 FFF7FEFF 		bl	Get_String_Util
+ 1139              	.LVL119:
+ 1140 0046 0546     		mov	r5, r0
+ 1141              	.LVL120:
+ 345:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     }
+ 1142              		.loc 1 345 9 is_stmt 1 view .LVU308
+ 1143 0048 411C     		adds	r1, r0, #1
+ 1144 004a 89B2     		uxth	r1, r1
+ 1145 004c 2046     		mov	r0, r4
+ 1146              	.LVL121:
+ 345:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     }
+ 1147              		.loc 1 345 9 is_stmt 0 view .LVU309
+ 1148 004e FFF7FEFF 		bl	Ring_Increase_Tail
+ 1149              	.LVL122:
+ 1150 0052 E7E7     		b	.L79
+ 1151              	.LVL123:
+ 1152              	.L80:
+ 340:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     Availabe = Is_available(Ring);
+ 1153              		.loc 1 340 30 view .LVU310
+ 1154 0054 4FF0FF35 		mov	r5, #-1
+ 1155 0058 E7E7     		b	.L77
+ 1156              		.cfi_endproc
+ 1157              	.LFE87:
+ 1159              		.section	.text.Get_String_Wait,"ax",%progbits
+ 1160              		.align	1
+ 1161              		.global	Get_String_Wait
+ 1162              		.syntax unified
+ 1163              		.thumb
+ 1164              		.thumb_func
+ 1166              	Get_String_Wait:
+ 1167              	.LVL124:
+ 1168              	.LFB88:
+ 350:Drivers/RingBuffer/Src/uartRingBufDMA.c **** 
+ 351:Drivers/RingBuffer/Src/uartRingBufDMA.c **** /**
+ 352:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  * @brief Get the string in the ring buffer with the terminate character.
+ 353:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  * @note Make sure the Get Time function already defined.
+ 354:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  * @param Ring The Ring Handler.
+ 355:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  * @param Buffer The pointer of the buffer.
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccvHVK4k.s 			page 30
+
+
+ 356:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  * @param Terminate The termanated character.
+ 357:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  * @retval int The length of the string was read. -1 meant timeout or Error.
+ 358:Drivers/RingBuffer/Src/uartRingBufDMA.c ****  */
+ 359:Drivers/RingBuffer/Src/uartRingBufDMA.c **** int Get_String_Wait(RingHandler_t *Ring, uint8_t *Buffer,
+ 360:Drivers/RingBuffer/Src/uartRingBufDMA.c ****                     const char Terminate) {
+ 1169              		.loc 1 360 43 is_stmt 1 view -0
+ 1170              		.cfi_startproc
+ 1171              		@ args = 0, pretend = 0, frame = 0
+ 1172              		@ frame_needed = 0, uses_anonymous_args = 0
+ 1173              		.loc 1 360 43 is_stmt 0 view .LVU312
+ 1174 0000 2DE9F047 		push	{r4, r5, r6, r7, r8, r9, r10, lr}
+ 1175              	.LCFI14:
+ 1176              		.cfi_def_cfa_offset 32
+ 1177              		.cfi_offset 4, -32
+ 1178              		.cfi_offset 5, -28
+ 1179              		.cfi_offset 6, -24
+ 1180              		.cfi_offset 7, -20
+ 1181              		.cfi_offset 8, -16
+ 1182              		.cfi_offset 9, -12
+ 1183              		.cfi_offset 10, -8
+ 1184              		.cfi_offset 14, -4
+ 1185 0004 0446     		mov	r4, r0
+ 1186 0006 8946     		mov	r9, r1
+ 1187 0008 9046     		mov	r8, r2
+ 361:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     uint32_t TimeStart = RingBuffer->GetTime();
+ 1188              		.loc 1 361 5 is_stmt 1 view .LVU313
+ 1189              		.loc 1 361 36 is_stmt 0 view .LVU314
+ 1190 000a 2A4B     		ldr	r3, .L94
+ 1191 000c 1B68     		ldr	r3, [r3]
+ 1192 000e D3F8083D 		ldr	r3, [r3, #3336]
+ 1193              		.loc 1 361 26 view .LVU315
+ 1194 0012 9847     		blx	r3
+ 1195              	.LVL125:
+ 1196              		.loc 1 361 26 view .LVU316
+ 1197 0014 0546     		mov	r5, r0
+ 1198              	.LVL126:
+ 362:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     uint32_t CurrentTime = TimeStart;
+ 1199              		.loc 1 362 5 is_stmt 1 view .LVU317
+ 363:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     uint8_t *Temp = NULL;
+ 1200              		.loc 1 363 5 view .LVU318
+ 364:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     uint8_t *CheckData = NULL;
+ 1201              		.loc 1 364 5 view .LVU319
+ 365:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     int LengthRead = -1;
+ 1202              		.loc 1 365 5 view .LVU320
+ 366:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     Temp = malloc(RING_BUFFER_SIZE);
+ 1203              		.loc 1 366 5 view .LVU321
+ 1204              		.loc 1 366 12 is_stmt 0 view .LVU322
+ 1205 0016 4FF48060 		mov	r0, #1024
+ 1206              	.LVL127:
+ 1207              		.loc 1 366 12 view .LVU323
+ 1208 001a FFF7FEFF 		bl	malloc
+ 1209              	.LVL128:
+ 1210 001e 0646     		mov	r6, r0
+ 1211              	.LVL129:
+ 367:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     CheckData = malloc(RING_BUFFER_SIZE);
+ 1212              		.loc 1 367 5 is_stmt 1 view .LVU324
+ 1213              		.loc 1 367 17 is_stmt 0 view .LVU325
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccvHVK4k.s 			page 31
+
+
+ 1214 0020 4FF48060 		mov	r0, #1024
+ 1215              	.LVL130:
+ 1216              		.loc 1 367 17 view .LVU326
+ 1217 0024 FFF7FEFF 		bl	malloc
+ 1218              	.LVL131:
+ 368:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     if (Temp == NULL || CheckData == NULL) return -1;
+ 1219              		.loc 1 368 5 is_stmt 1 view .LVU327
+ 1220              		.loc 1 368 8 is_stmt 0 view .LVU328
+ 1221 0028 002E     		cmp	r6, #0
+ 1222 002a 3DD0     		beq	.L90
+ 1223 002c 0746     		mov	r7, r0
+ 1224              		.loc 1 368 22 discriminator 2 view .LVU329
+ 1225 002e 0028     		cmp	r0, #0
+ 1226 0030 3DD0     		beq	.L91
+ 362:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     uint8_t *Temp = NULL;
+ 1227              		.loc 1 362 14 view .LVU330
+ 1228 0032 2846     		mov	r0, r5
+ 1229              	.LVL132:
+ 362:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     uint8_t *Temp = NULL;
+ 1230              		.loc 1 362 14 view .LVU331
+ 1231 0034 04E0     		b	.L86
+ 1232              	.LVL133:
+ 1233              	.L87:
+ 1234              	.LBB5:
+ 369:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     while ((CurrentTime - TimeStart) < Ring->Timeout) {
+ 370:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         int Available = Is_available(Ring);
+ 371:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         if (Available > 0) {
+ 372:Drivers/RingBuffer/Src/uartRingBufDMA.c ****             get_peek(Ring, Temp, Available);
+ 373:Drivers/RingBuffer/Src/uartRingBufDMA.c ****             int Length = Get_String_Util(CheckData, Temp, Terminate, Available);
+ 374:Drivers/RingBuffer/Src/uartRingBufDMA.c ****             if (Length >= 0) {
+ 375:Drivers/RingBuffer/Src/uartRingBufDMA.c ****                 Ring_Increase_Tail(Ring, Length + 1);
+ 376:Drivers/RingBuffer/Src/uartRingBufDMA.c ****                 memset(Buffer + Length, '\0', 1);
+ 377:Drivers/RingBuffer/Src/uartRingBufDMA.c ****                 memcpy(Buffer, CheckData, Length);
+ 378:Drivers/RingBuffer/Src/uartRingBufDMA.c ****                 LengthRead = Length;
+ 379:Drivers/RingBuffer/Src/uartRingBufDMA.c ****                 break;
+ 380:Drivers/RingBuffer/Src/uartRingBufDMA.c ****             }
+ 381:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         }
+ 382:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         CurrentTime = RingBuffer->GetTime();
+ 1235              		.loc 1 382 9 is_stmt 1 view .LVU332
+ 1236              		.loc 1 382 33 is_stmt 0 view .LVU333
+ 1237 0036 1F4B     		ldr	r3, .L94
+ 1238 0038 1B68     		ldr	r3, [r3]
+ 1239 003a D3F8083D 		ldr	r3, [r3, #3336]
+ 1240              		.loc 1 382 23 view .LVU334
+ 1241 003e 9847     		blx	r3
+ 1242              	.LVL134:
+ 1243              	.L86:
+ 1244              		.loc 1 382 23 view .LVU335
+ 1245              	.LBE5:
+ 369:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     while ((CurrentTime - TimeStart) < Ring->Timeout) {
+ 1246              		.loc 1 369 11 is_stmt 1 view .LVU336
+ 369:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     while ((CurrentTime - TimeStart) < Ring->Timeout) {
+ 1247              		.loc 1 369 25 is_stmt 0 view .LVU337
+ 1248 0040 431B     		subs	r3, r0, r5
+ 369:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     while ((CurrentTime - TimeStart) < Ring->Timeout) {
+ 1249              		.loc 1 369 44 view .LVU338
+ 1250 0042 D4F85424 		ldr	r2, [r4, #1108]
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccvHVK4k.s 			page 32
+
+
+ 369:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     while ((CurrentTime - TimeStart) < Ring->Timeout) {
+ 1251              		.loc 1 369 11 view .LVU339
+ 1252 0046 9342     		cmp	r3, r2
+ 1253 0048 23D2     		bcs	.L93
+ 1254              	.LBB7:
+ 370:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         if (Available > 0) {
+ 1255              		.loc 1 370 9 is_stmt 1 view .LVU340
+ 370:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         if (Available > 0) {
+ 1256              		.loc 1 370 25 is_stmt 0 view .LVU341
+ 1257 004a 2046     		mov	r0, r4
+ 1258              	.LVL135:
+ 370:Drivers/RingBuffer/Src/uartRingBufDMA.c ****         if (Available > 0) {
+ 1259              		.loc 1 370 25 view .LVU342
+ 1260 004c FFF7FEFF 		bl	Is_available
+ 1261              	.LVL136:
+ 371:Drivers/RingBuffer/Src/uartRingBufDMA.c ****             get_peek(Ring, Temp, Available);
+ 1262              		.loc 1 371 9 is_stmt 1 view .LVU343
+ 371:Drivers/RingBuffer/Src/uartRingBufDMA.c ****             get_peek(Ring, Temp, Available);
+ 1263              		.loc 1 371 12 is_stmt 0 view .LVU344
+ 1264 0050 B0F1000A 		subs	r10, r0, #0
+ 1265 0054 EFDD     		ble	.L87
+ 1266              	.LBB6:
+ 372:Drivers/RingBuffer/Src/uartRingBufDMA.c ****             int Length = Get_String_Util(CheckData, Temp, Terminate, Available);
+ 1267              		.loc 1 372 13 is_stmt 1 view .LVU345
+ 1268 0056 1FFA8AF2 		uxth	r2, r10
+ 1269 005a 3146     		mov	r1, r6
+ 1270 005c 2046     		mov	r0, r4
+ 1271              	.LVL137:
+ 372:Drivers/RingBuffer/Src/uartRingBufDMA.c ****             int Length = Get_String_Util(CheckData, Temp, Terminate, Available);
+ 1272              		.loc 1 372 13 is_stmt 0 view .LVU346
+ 1273 005e FFF7FEFF 		bl	get_peek
+ 1274              	.LVL138:
+ 373:Drivers/RingBuffer/Src/uartRingBufDMA.c ****             if (Length >= 0) {
+ 1275              		.loc 1 373 13 is_stmt 1 view .LVU347
+ 373:Drivers/RingBuffer/Src/uartRingBufDMA.c ****             if (Length >= 0) {
+ 1276              		.loc 1 373 26 is_stmt 0 view .LVU348
+ 1277 0062 5346     		mov	r3, r10
+ 1278 0064 4246     		mov	r2, r8
+ 1279 0066 3146     		mov	r1, r6
+ 1280 0068 3846     		mov	r0, r7
+ 1281 006a FFF7FEFF 		bl	Get_String_Util
+ 1282              	.LVL139:
+ 374:Drivers/RingBuffer/Src/uartRingBufDMA.c ****                 Ring_Increase_Tail(Ring, Length + 1);
+ 1283              		.loc 1 374 13 is_stmt 1 view .LVU349
+ 374:Drivers/RingBuffer/Src/uartRingBufDMA.c ****                 Ring_Increase_Tail(Ring, Length + 1);
+ 1284              		.loc 1 374 16 is_stmt 0 view .LVU350
+ 1285 006e B0F1000A 		subs	r10, r0, #0
+ 1286              	.LVL140:
+ 374:Drivers/RingBuffer/Src/uartRingBufDMA.c ****                 Ring_Increase_Tail(Ring, Length + 1);
+ 1287              		.loc 1 374 16 view .LVU351
+ 1288 0072 E0DB     		blt	.L87
+ 375:Drivers/RingBuffer/Src/uartRingBufDMA.c ****                 memset(Buffer + Length, '\0', 1);
+ 1289              		.loc 1 375 17 is_stmt 1 view .LVU352
+ 1290 0074 0AF10101 		add	r1, r10, #1
+ 1291 0078 89B2     		uxth	r1, r1
+ 1292 007a 2046     		mov	r0, r4
+ 1293              	.LVL141:
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccvHVK4k.s 			page 33
+
+
+ 375:Drivers/RingBuffer/Src/uartRingBufDMA.c ****                 memset(Buffer + Length, '\0', 1);
+ 1294              		.loc 1 375 17 is_stmt 0 view .LVU353
+ 1295 007c FFF7FEFF 		bl	Ring_Increase_Tail
+ 1296              	.LVL142:
+ 376:Drivers/RingBuffer/Src/uartRingBufDMA.c ****                 memcpy(Buffer, CheckData, Length);
+ 1297              		.loc 1 376 17 is_stmt 1 view .LVU354
+ 1298 0080 0023     		movs	r3, #0
+ 1299 0082 09F80A30 		strb	r3, [r9, r10]
+ 377:Drivers/RingBuffer/Src/uartRingBufDMA.c ****                 LengthRead = Length;
+ 1300              		.loc 1 377 17 view .LVU355
+ 1301 0086 5246     		mov	r2, r10
+ 1302 0088 3946     		mov	r1, r7
+ 1303 008a 4846     		mov	r0, r9
+ 1304 008c FFF7FEFF 		bl	memcpy
+ 1305              	.LVL143:
+ 378:Drivers/RingBuffer/Src/uartRingBufDMA.c ****                 break;
+ 1306              		.loc 1 378 17 view .LVU356
+ 379:Drivers/RingBuffer/Src/uartRingBufDMA.c ****             }
+ 1307              		.loc 1 379 17 view .LVU357
+ 1308 0090 01E0     		b	.L88
+ 1309              	.LVL144:
+ 1310              	.L93:
+ 379:Drivers/RingBuffer/Src/uartRingBufDMA.c ****             }
+ 1311              		.loc 1 379 17 is_stmt 0 view .LVU358
+ 1312              	.LBE6:
+ 1313              	.LBE7:
+ 365:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     Temp = malloc(RING_BUFFER_SIZE);
+ 1314              		.loc 1 365 9 view .LVU359
+ 1315 0092 4FF0FF3A 		mov	r10, #-1
+ 1316              	.LVL145:
+ 1317              	.L88:
+ 383:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     }
+ 384:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     free(Temp);
+ 1318              		.loc 1 384 5 is_stmt 1 view .LVU360
+ 1319 0096 3046     		mov	r0, r6
+ 1320 0098 FFF7FEFF 		bl	free
+ 1321              	.LVL146:
+ 385:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     free(CheckData);
+ 1322              		.loc 1 385 5 view .LVU361
+ 1323 009c 3846     		mov	r0, r7
+ 1324 009e FFF7FEFF 		bl	free
+ 1325              	.LVL147:
+ 386:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     return LengthRead;
+ 1326              		.loc 1 386 5 view .LVU362
+ 1327              	.L84:
+ 387:Drivers/RingBuffer/Src/uartRingBufDMA.c **** }
+ 1328              		.loc 1 387 1 is_stmt 0 view .LVU363
+ 1329 00a2 5046     		mov	r0, r10
+ 1330 00a4 BDE8F087 		pop	{r4, r5, r6, r7, r8, r9, r10, pc}
+ 1331              	.LVL148:
+ 1332              	.L90:
+ 368:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     while ((CurrentTime - TimeStart) < Ring->Timeout) {
+ 1333              		.loc 1 368 51 view .LVU364
+ 1334 00a8 4FF0FF3A 		mov	r10, #-1
+ 1335 00ac F9E7     		b	.L84
+ 1336              	.L91:
+ 368:Drivers/RingBuffer/Src/uartRingBufDMA.c ****     while ((CurrentTime - TimeStart) < Ring->Timeout) {
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccvHVK4k.s 			page 34
+
+
+ 1337              		.loc 1 368 51 view .LVU365
+ 1338 00ae 4FF0FF3A 		mov	r10, #-1
+ 1339 00b2 F6E7     		b	.L84
+ 1340              	.L95:
+ 1341              		.align	2
+ 1342              	.L94:
+ 1343 00b4 00000000 		.word	.LANCHOR0
+ 1344              		.cfi_endproc
+ 1345              	.LFE88:
+ 1347              		.section	.bss.RingBuffer,"aw",%nobits
+ 1348              		.align	2
+ 1349              		.set	.LANCHOR0,. + 0
+ 1352              	RingBuffer:
+ 1353 0000 00000000 		.space	4
+ 1354              		.text
+ 1355              	.Letext0:
+ 1356              		.file 2 "c:\\program files (x86)\\gnu arm embedded toolchain\\10 2021.10\\lib\\gcc\\arm-none-eabi\
+ 1357              		.file 3 "c:\\program files (x86)\\gnu arm embedded toolchain\\10 2021.10\\arm-none-eabi\\include\\
+ 1358              		.file 4 "c:\\program files (x86)\\gnu arm embedded toolchain\\10 2021.10\\arm-none-eabi\\include\\
+ 1359              		.file 5 "Drivers/CMSIS/Device/ST/STM32F2xx/Include/stm32f205xx.h"
+ 1360              		.file 6 "Drivers/STM32F2xx_HAL_Driver/Inc/stm32f2xx_hal_def.h"
+ 1361              		.file 7 "Drivers/STM32F2xx_HAL_Driver/Inc/stm32f2xx_hal_dma.h"
+ 1362              		.file 8 "Drivers/STM32F2xx_HAL_Driver/Inc/stm32f2xx_hal_uart.h"
+ 1363              		.file 9 "Drivers/RingBuffer/Inc/uartRingBufDMA.h"
+ 1364              		.file 10 "c:\\program files (x86)\\gnu arm embedded toolchain\\10 2021.10\\arm-none-eabi\\include\
+ 1365              		.file 11 "c:\\program files (x86)\\gnu arm embedded toolchain\\10 2021.10\\arm-none-eabi\\include\
+ 1366              		.file 12 "<built-in>"
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccvHVK4k.s 			page 35
+
+
+DEFINED SYMBOLS
+                            *ABS*:00000000 uartRingBufDMA.c
+C:\Users\sangt\AppData\Local\Temp\ccvHVK4k.s:18     .text.Is_available:00000000 $t
+C:\Users\sangt\AppData\Local\Temp\ccvHVK4k.s:24     .text.Is_available:00000000 Is_available
+C:\Users\sangt\AppData\Local\Temp\ccvHVK4k.s:84     .text.Ring_Reset:00000000 $t
+C:\Users\sangt\AppData\Local\Temp\ccvHVK4k.s:90     .text.Ring_Reset:00000000 Ring_Reset
+C:\Users\sangt\AppData\Local\Temp\ccvHVK4k.s:175    .text.Ring_Reset:00000070 $d
+C:\Users\sangt\AppData\Local\Temp\ccvHVK4k.s:180    .text.Ring_Restart_Uart:00000000 $t
+C:\Users\sangt\AppData\Local\Temp\ccvHVK4k.s:186    .text.Ring_Restart_Uart:00000000 Ring_Restart_Uart
+C:\Users\sangt\AppData\Local\Temp\ccvHVK4k.s:221    .text.Ring_Init:00000000 $t
+C:\Users\sangt\AppData\Local\Temp\ccvHVK4k.s:227    .text.Ring_Init:00000000 Ring_Init
+C:\Users\sangt\AppData\Local\Temp\ccvHVK4k.s:296    .text.Ring_Init:00000040 $d
+C:\Users\sangt\AppData\Local\Temp\ccvHVK4k.s:301    .text.HAL_UARTEx_RxEventCallback:00000000 $t
+C:\Users\sangt\AppData\Local\Temp\ccvHVK4k.s:307    .text.HAL_UARTEx_RxEventCallback:00000000 HAL_UARTEx_RxEventCallback
+C:\Users\sangt\AppData\Local\Temp\ccvHVK4k.s:441    .text.HAL_UARTEx_RxEventCallback:0000007c $d
+C:\Users\sangt\AppData\Local\Temp\ccvHVK4k.s:446    .text.Get_Time:00000000 $t
+C:\Users\sangt\AppData\Local\Temp\ccvHVK4k.s:452    .text.Get_Time:00000000 Get_Time
+C:\Users\sangt\AppData\Local\Temp\ccvHVK4k.s:484    .text.Get_Time:00000014 $d
+C:\Users\sangt\AppData\Local\Temp\ccvHVK4k.s:489    .text.Ring_Increase_Tail:00000000 $t
+C:\Users\sangt\AppData\Local\Temp\ccvHVK4k.s:495    .text.Ring_Increase_Tail:00000000 Ring_Increase_Tail
+C:\Users\sangt\AppData\Local\Temp\ccvHVK4k.s:533    .text.get_char:00000000 $t
+C:\Users\sangt\AppData\Local\Temp\ccvHVK4k.s:539    .text.get_char:00000000 get_char
+C:\Users\sangt\AppData\Local\Temp\ccvHVK4k.s:587    .text.Ring_Copy_Buffer:00000000 $t
+C:\Users\sangt\AppData\Local\Temp\ccvHVK4k.s:593    .text.Ring_Copy_Buffer:00000000 Ring_Copy_Buffer
+C:\Users\sangt\AppData\Local\Temp\ccvHVK4k.s:684    .text.get_peek:00000000 $t
+C:\Users\sangt\AppData\Local\Temp\ccvHVK4k.s:690    .text.get_peek:00000000 get_peek
+C:\Users\sangt\AppData\Local\Temp\ccvHVK4k.s:743    .text.get_string:00000000 $t
+C:\Users\sangt\AppData\Local\Temp\ccvHVK4k.s:749    .text.get_string:00000000 get_string
+C:\Users\sangt\AppData\Local\Temp\ccvHVK4k.s:794    .text.IndexOf:00000000 $t
+C:\Users\sangt\AppData\Local\Temp\ccvHVK4k.s:800    .text.IndexOf:00000000 IndexOf
+C:\Users\sangt\AppData\Local\Temp\ccvHVK4k.s:842    .text.Detect_Char:00000000 $t
+C:\Users\sangt\AppData\Local\Temp\ccvHVK4k.s:848    .text.Detect_Char:00000000 Detect_Char
+C:\Users\sangt\AppData\Local\Temp\ccvHVK4k.s:952    .text.IndexOfString:00000000 $t
+C:\Users\sangt\AppData\Local\Temp\ccvHVK4k.s:958    .text.IndexOfString:00000000 IndexOfString
+C:\Users\sangt\AppData\Local\Temp\ccvHVK4k.s:993    .text.Get_String_Util:00000000 $t
+C:\Users\sangt\AppData\Local\Temp\ccvHVK4k.s:999    .text.Get_String_Util:00000000 Get_String_Util
+C:\Users\sangt\AppData\Local\Temp\ccvHVK4k.s:1057   .text.Get_String_NonBlocking:00000000 $t
+C:\Users\sangt\AppData\Local\Temp\ccvHVK4k.s:1063   .text.Get_String_NonBlocking:00000000 Get_String_NonBlocking
+C:\Users\sangt\AppData\Local\Temp\ccvHVK4k.s:1160   .text.Get_String_Wait:00000000 $t
+C:\Users\sangt\AppData\Local\Temp\ccvHVK4k.s:1166   .text.Get_String_Wait:00000000 Get_String_Wait
+C:\Users\sangt\AppData\Local\Temp\ccvHVK4k.s:1343   .text.Get_String_Wait:000000b4 $d
+C:\Users\sangt\AppData\Local\Temp\ccvHVK4k.s:1348   .bss.RingBuffer:00000000 $d
+C:\Users\sangt\AppData\Local\Temp\ccvHVK4k.s:1352   .bss.RingBuffer:00000000 RingBuffer
+
+UNDEFINED SYMBOLS
+memset
+HAL_UARTEx_ReceiveToIdle_DMA
+memcpy
+memchr
+malloc
+free
+strlen

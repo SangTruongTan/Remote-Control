@@ -1,0 +1,1724 @@
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\cc9fK6hT.s 			page 1
+
+
+   1              		.cpu cortex-m3
+   2              		.arch armv7-m
+   3              		.fpu softvfp
+   4              		.eabi_attribute 20, 1
+   5              		.eabi_attribute 21, 1
+   6              		.eabi_attribute 23, 3
+   7              		.eabi_attribute 24, 1
+   8              		.eabi_attribute 25, 1
+   9              		.eabi_attribute 26, 1
+  10              		.eabi_attribute 30, 1
+  11              		.eabi_attribute 34, 1
+  12              		.eabi_attribute 18, 4
+  13              		.file	"RemoteControl.c"
+  14              		.text
+  15              	.Ltext0:
+  16              		.cfi_sections	.debug_frame
+  17              		.section	.text.Control_Parse,"ax",%progbits
+  18              		.align	1
+  19              		.global	Control_Parse
+  20              		.syntax unified
+  21              		.thumb
+  22              		.thumb_func
+  24              	Control_Parse:
+  25              	.LVL0:
+  26              	.LFB72:
+  27              		.file 1 "Drivers/Radio/Src/RemoteControl.c"
+   1:Drivers/Radio/Src/RemoteControl.c **** /* USER CODE BEGIN Header */
+   2:Drivers/Radio/Src/RemoteControl.c **** /**
+   3:Drivers/Radio/Src/RemoteControl.c ****  ******************************************************************************
+   4:Drivers/Radio/Src/RemoteControl.c ****  * @file           : RemoteControl.c
+   5:Drivers/Radio/Src/RemoteControl.c ****  * @brief          : Main program body
+   6:Drivers/Radio/Src/RemoteControl.c ****  ******************************************************************************
+   7:Drivers/Radio/Src/RemoteControl.c ****  * @attention
+   8:Drivers/Radio/Src/RemoteControl.c ****  *
+   9:Drivers/Radio/Src/RemoteControl.c ****  * <h2><center>&copy; Copyright (c) 2022 Sang Tan Truong.
+  10:Drivers/Radio/Src/RemoteControl.c ****  * All rights reserved.</center></h2>
+  11:Drivers/Radio/Src/RemoteControl.c ****  *
+  12:Drivers/Radio/Src/RemoteControl.c ****  * This software component is licensed by ST under BSD 3-Clause license,
+  13:Drivers/Radio/Src/RemoteControl.c ****  * the "License"; You may not use this file except in compliance with the
+  14:Drivers/Radio/Src/RemoteControl.c ****  * License. You may obtain a copy of the License at:
+  15:Drivers/Radio/Src/RemoteControl.c ****  *                        opensource.org/licenses/BSD-3-Clause
+  16:Drivers/Radio/Src/RemoteControl.c ****  *
+  17:Drivers/Radio/Src/RemoteControl.c ****  ******************************************************************************
+  18:Drivers/Radio/Src/RemoteControl.c ****  */
+  19:Drivers/Radio/Src/RemoteControl.c **** /* USER CODE END Header */
+  20:Drivers/Radio/Src/RemoteControl.c **** /* Includes ------------------------------------------------------------------*/
+  21:Drivers/Radio/Src/RemoteControl.c **** #include "RemoteControl.h"
+  22:Drivers/Radio/Src/RemoteControl.c **** 
+  23:Drivers/Radio/Src/RemoteControl.c **** /* Private includes ----------------------------------------------------------*/
+  24:Drivers/Radio/Src/RemoteControl.c **** #include "stdlib.h"
+  25:Drivers/Radio/Src/RemoteControl.c **** #include "stm32f2xx_hal.h"
+  26:Drivers/Radio/Src/RemoteControl.c **** #include "string.h"
+  27:Drivers/Radio/Src/RemoteControl.c **** 
+  28:Drivers/Radio/Src/RemoteControl.c **** /* Private typedef -----------------------------------------------------------*/
+  29:Drivers/Radio/Src/RemoteControl.c **** 
+  30:Drivers/Radio/Src/RemoteControl.c **** /* Private define ------------------------------------------------------------*/
+  31:Drivers/Radio/Src/RemoteControl.c **** #define ROWS 12
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\cc9fK6hT.s 			page 2
+
+
+  32:Drivers/Radio/Src/RemoteControl.c **** #define COLUMNS 16
+  33:Drivers/Radio/Src/RemoteControl.c **** 
+  34:Drivers/Radio/Src/RemoteControl.c **** /* Private macro -------------------------------------------------------------*/
+  35:Drivers/Radio/Src/RemoteControl.c **** 
+  36:Drivers/Radio/Src/RemoteControl.c **** /* Private variables ---------------------------------------------------------*/
+  37:Drivers/Radio/Src/RemoteControl.c **** ControlHandler_t *ControlHandler;
+  38:Drivers/Radio/Src/RemoteControl.c **** 
+  39:Drivers/Radio/Src/RemoteControl.c **** /* Private function prototypes -----------------------------------------------*/
+  40:Drivers/Radio/Src/RemoteControl.c **** int Control_Parse(uint8_t (*TempBuffer)[COLUMNS], uint8_t *Source,
+  41:Drivers/Radio/Src/RemoteControl.c ****                   const char Deli);
+  42:Drivers/Radio/Src/RemoteControl.c **** 
+  43:Drivers/Radio/Src/RemoteControl.c **** ControlStatus_t Decode_CMD(ControlInfo_t *Control,
+  44:Drivers/Radio/Src/RemoteControl.c ****                            uint8_t (*StructBuffer)[COLUMNS]);
+  45:Drivers/Radio/Src/RemoteControl.c **** 
+  46:Drivers/Radio/Src/RemoteControl.c **** ControlStatus_t Decode_PID(ControlInfo_t *Control,
+  47:Drivers/Radio/Src/RemoteControl.c ****                            uint8_t (*StructBuffer)[COLUMNS]);
+  48:Drivers/Radio/Src/RemoteControl.c **** 
+  49:Drivers/Radio/Src/RemoteControl.c **** ControlStatus_t Decode_Mode(ControlMode_t *Mode,
+  50:Drivers/Radio/Src/RemoteControl.c ****                             uint8_t (*StructBuffer)[COLUMNS]);
+  51:Drivers/Radio/Src/RemoteControl.c **** 
+  52:Drivers/Radio/Src/RemoteControl.c **** /* Private function definations ----------------------------------------------*/
+  53:Drivers/Radio/Src/RemoteControl.c **** /**
+  54:Drivers/Radio/Src/RemoteControl.c ****  * @brief Parse the string with the delimiter.
+  55:Drivers/Radio/Src/RemoteControl.c ****  * @param TempBuffer The temporary buffer.
+  56:Drivers/Radio/Src/RemoteControl.c ****  * @param Source The Source of the String.
+  57:Drivers/Radio/Src/RemoteControl.c ****  * @param Deli the delimiter.
+  58:Drivers/Radio/Src/RemoteControl.c ****  * @retval int The number of split string.
+  59:Drivers/Radio/Src/RemoteControl.c ****  */
+  60:Drivers/Radio/Src/RemoteControl.c **** int Control_Parse(uint8_t (*TempBuffer)[COLUMNS], uint8_t *Source,
+  61:Drivers/Radio/Src/RemoteControl.c ****                   const char Deli) {
+  28              		.loc 1 61 36 view -0
+  29              		.cfi_startproc
+  30              		@ args = 0, pretend = 0, frame = 8
+  31              		@ frame_needed = 0, uses_anonymous_args = 0
+  32              		.loc 1 61 36 is_stmt 0 view .LVU1
+  33 0000 30B5     		push	{r4, r5, lr}
+  34              	.LCFI0:
+  35              		.cfi_def_cfa_offset 12
+  36              		.cfi_offset 4, -12
+  37              		.cfi_offset 5, -8
+  38              		.cfi_offset 14, -4
+  39 0002 83B0     		sub	sp, sp, #12
+  40              	.LCFI1:
+  41              		.cfi_def_cfa_offset 24
+  42 0004 0546     		mov	r5, r0
+  43 0006 0846     		mov	r0, r1
+  44              	.LVL1:
+  45              		.loc 1 61 36 view .LVU2
+  46 0008 8DF80720 		strb	r2, [sp, #7]
+  62:Drivers/Radio/Src/RemoteControl.c ****     int length = 0;
+  47              		.loc 1 62 5 is_stmt 1 view .LVU3
+  48              	.LVL2:
+  63:Drivers/Radio/Src/RemoteControl.c ****     char *Head = malloc(32);
+  49              		.loc 1 63 5 view .LVU4
+  64:Drivers/Radio/Src/RemoteControl.c ****     Head = strtok((char *)Source, &Deli);
+  50              		.loc 1 64 5 view .LVU5
+  51              		.loc 1 64 12 is_stmt 0 view .LVU6
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\cc9fK6hT.s 			page 3
+
+
+  52 000c 0DF10701 		add	r1, sp, #7
+  53              	.LVL3:
+  54              		.loc 1 64 12 view .LVU7
+  55 0010 FFF7FEFF 		bl	strtok
+  56              	.LVL4:
+  57              		.loc 1 64 12 view .LVU8
+  58 0014 0146     		mov	r1, r0
+  59              	.LVL5:
+  65:Drivers/Radio/Src/RemoteControl.c ****     while (Head != NULL) {
+  60              		.loc 1 65 5 is_stmt 1 view .LVU9
+  62:Drivers/Radio/Src/RemoteControl.c ****     char *Head = malloc(32);
+  61              		.loc 1 62 9 is_stmt 0 view .LVU10
+  62 0016 0024     		movs	r4, #0
+  63              		.loc 1 65 11 view .LVU11
+  64 0018 0AE0     		b	.L2
+  65              	.LVL6:
+  66              	.L3:
+  66:Drivers/Radio/Src/RemoteControl.c ****         strcpy((char *)&(TempBuffer)[length], Head);
+  67              		.loc 1 66 9 is_stmt 1 view .LVU12
+  68 001a 05EB0410 		add	r0, r5, r4, lsl #4
+  69              	.LVL7:
+  70              		.loc 1 66 9 is_stmt 0 view .LVU13
+  71 001e FFF7FEFF 		bl	strcpy
+  72              	.LVL8:
+  67:Drivers/Radio/Src/RemoteControl.c ****         length++;
+  73              		.loc 1 67 9 is_stmt 1 view .LVU14
+  74              		.loc 1 67 15 is_stmt 0 view .LVU15
+  75 0022 0134     		adds	r4, r4, #1
+  76              	.LVL9:
+  68:Drivers/Radio/Src/RemoteControl.c ****         Head = strtok(NULL, &Deli);
+  77              		.loc 1 68 9 is_stmt 1 view .LVU16
+  78              		.loc 1 68 16 is_stmt 0 view .LVU17
+  79 0024 0DF10701 		add	r1, sp, #7
+  80 0028 0020     		movs	r0, #0
+  81 002a FFF7FEFF 		bl	strtok
+  82              	.LVL10:
+  83 002e 0146     		mov	r1, r0
+  84              	.LVL11:
+  85              	.L2:
+  65:Drivers/Radio/Src/RemoteControl.c ****         strcpy((char *)&(TempBuffer)[length], Head);
+  86              		.loc 1 65 11 is_stmt 1 view .LVU18
+  87 0030 0029     		cmp	r1, #0
+  88 0032 F2D1     		bne	.L3
+  69:Drivers/Radio/Src/RemoteControl.c ****     }
+  70:Drivers/Radio/Src/RemoteControl.c ****     free(Head);
+  89              		.loc 1 70 5 view .LVU19
+  90 0034 0846     		mov	r0, r1
+  91              		.loc 1 70 5 is_stmt 0 view .LVU20
+  92 0036 FFF7FEFF 		bl	free
+  93              	.LVL12:
+  71:Drivers/Radio/Src/RemoteControl.c ****     return length;
+  94              		.loc 1 71 5 is_stmt 1 view .LVU21
+  72:Drivers/Radio/Src/RemoteControl.c **** }
+  95              		.loc 1 72 1 is_stmt 0 view .LVU22
+  96 003a 2046     		mov	r0, r4
+  97 003c 03B0     		add	sp, sp, #12
+  98              	.LCFI2:
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\cc9fK6hT.s 			page 4
+
+
+  99              		.cfi_def_cfa_offset 12
+ 100              		@ sp needed
+ 101 003e 30BD     		pop	{r4, r5, pc}
+ 102              		.loc 1 72 1 view .LVU23
+ 103              		.cfi_endproc
+ 104              	.LFE72:
+ 106              		.section	.rodata.Decode_CMD.str1.4,"aMS",%progbits,1
+ 107              		.align	2
+ 108              	.LC0:
+ 109 0000 434D4400 		.ascii	"CMD\000"
+ 110              		.align	2
+ 111              	.LC1:
+ 112 0004 5400     		.ascii	"T\000"
+ 113 0006 0000     		.align	2
+ 114              	.LC2:
+ 115 0008 5200     		.ascii	"R\000"
+ 116 000a 0000     		.align	2
+ 117              	.LC3:
+ 118 000c 5000     		.ascii	"P\000"
+ 119 000e 0000     		.align	2
+ 120              	.LC4:
+ 121 0010 5900     		.ascii	"Y\000"
+ 122              		.section	.text.Decode_CMD,"ax",%progbits
+ 123              		.align	1
+ 124              		.global	Decode_CMD
+ 125              		.syntax unified
+ 126              		.thumb
+ 127              		.thumb_func
+ 129              	Decode_CMD:
+ 130              	.LVL13:
+ 131              	.LFB73:
+  73:Drivers/Radio/Src/RemoteControl.c **** 
+  74:Drivers/Radio/Src/RemoteControl.c **** /**
+  75:Drivers/Radio/Src/RemoteControl.c ****  * @brief Decode the CMD message.
+  76:Drivers/Radio/Src/RemoteControl.c ****  * @param Control The Control Pointer.
+  77:Drivers/Radio/Src/RemoteControl.c ****  * @param StructBuffer The Structural Buffer.
+  78:Drivers/Radio/Src/RemoteControl.c ****  * @retval ControlStatus_t
+  79:Drivers/Radio/Src/RemoteControl.c ****  */
+  80:Drivers/Radio/Src/RemoteControl.c **** ControlStatus_t Decode_CMD(ControlInfo_t *Control,
+  81:Drivers/Radio/Src/RemoteControl.c ****                            uint8_t (*StructBuffer)[COLUMNS]) {
+ 132              		.loc 1 81 62 is_stmt 1 view -0
+ 133              		.cfi_startproc
+ 134              		@ args = 0, pretend = 0, frame = 0
+ 135              		@ frame_needed = 0, uses_anonymous_args = 0
+ 136              		.loc 1 81 62 is_stmt 0 view .LVU25
+ 137 0000 2DE9F041 		push	{r4, r5, r6, r7, r8, lr}
+ 138              	.LCFI3:
+ 139              		.cfi_def_cfa_offset 24
+ 140              		.cfi_offset 4, -24
+ 141              		.cfi_offset 5, -20
+ 142              		.cfi_offset 6, -16
+ 143              		.cfi_offset 7, -12
+ 144              		.cfi_offset 8, -8
+ 145              		.cfi_offset 14, -4
+ 146 0004 8046     		mov	r8, r0
+ 147 0006 0D46     		mov	r5, r1
+  82:Drivers/Radio/Src/RemoteControl.c ****     int index = 1;
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\cc9fK6hT.s 			page 5
+
+
+ 148              		.loc 1 82 5 is_stmt 1 view .LVU26
+ 149              	.LVL14:
+  83:Drivers/Radio/Src/RemoteControl.c ****     if (strcmp((const char *)&StructBuffer[0], "CMD") != 0)
+ 150              		.loc 1 83 5 view .LVU27
+ 151              		.loc 1 83 9 is_stmt 0 view .LVU28
+ 152 0008 2349     		ldr	r1, .L18
+ 153              	.LVL15:
+ 154              		.loc 1 83 9 view .LVU29
+ 155 000a 2846     		mov	r0, r5
+ 156              	.LVL16:
+ 157              		.loc 1 83 9 view .LVU30
+ 158 000c FFF7FEFF 		bl	strcmp
+ 159              	.LVL17:
+ 160              		.loc 1 83 8 view .LVU31
+ 161 0010 0028     		cmp	r0, #0
+ 162 0012 3DD1     		bne	.L13
+  82:Drivers/Radio/Src/RemoteControl.c ****     int index = 1;
+ 163              		.loc 1 82 9 view .LVU32
+ 164 0014 0124     		movs	r4, #1
+ 165 0016 07E0     		b	.L7
+ 166              	.LVL18:
+ 167              	.L15:
+  84:Drivers/Radio/Src/RemoteControl.c ****         return CONTROL_ERROR;
+  85:Drivers/Radio/Src/RemoteControl.c ****     while (StructBuffer[index][0] != '\0') {
+  86:Drivers/Radio/Src/RemoteControl.c ****         if (strcmp((const char *)&StructBuffer[index], "T") == 0) {
+  87:Drivers/Radio/Src/RemoteControl.c ****             Control->JoyStick.Thrust =
+ 168              		.loc 1 87 13 is_stmt 1 view .LVU33
+  88:Drivers/Radio/Src/RemoteControl.c ****                 atoi((const char *)&StructBuffer[index + 1]);
+ 169              		.loc 1 88 49 is_stmt 0 view .LVU34
+ 170 0018 781C     		adds	r0, r7, #1
+ 171              		.loc 1 88 17 view .LVU35
+ 172 001a 05EB0010 		add	r0, r5, r0, lsl #4
+ 173 001e FFF7FEFF 		bl	atoi
+ 174              	.LVL19:
+  87:Drivers/Radio/Src/RemoteControl.c ****                 atoi((const char *)&StructBuffer[index + 1]);
+ 175              		.loc 1 87 38 view .LVU36
+ 176 0022 A8F80000 		strh	r0, [r8]	@ movhi
+ 177              	.L9:
+  89:Drivers/Radio/Src/RemoteControl.c ****         } else if (strcmp((const char *)&StructBuffer[index], "R") == 0) {
+  90:Drivers/Radio/Src/RemoteControl.c ****             Control->JoyStick.Roll =
+  91:Drivers/Radio/Src/RemoteControl.c ****                 atoi((const char *)&StructBuffer[index + 1]);
+  92:Drivers/Radio/Src/RemoteControl.c ****         } else if (strcmp((const char *)&StructBuffer[index], "P") == 0) {
+  93:Drivers/Radio/Src/RemoteControl.c ****             Control->JoyStick.Pitch =
+  94:Drivers/Radio/Src/RemoteControl.c ****                 atoi((const char *)&StructBuffer[index + 1]);
+  95:Drivers/Radio/Src/RemoteControl.c ****         } else if (strcmp((const char *)&StructBuffer[index], "Y") == 0) {
+  96:Drivers/Radio/Src/RemoteControl.c ****             Control->JoyStick.Yaw =
+  97:Drivers/Radio/Src/RemoteControl.c ****                 atoi((const char *)&StructBuffer[index + 1]);
+  98:Drivers/Radio/Src/RemoteControl.c ****         }
+  99:Drivers/Radio/Src/RemoteControl.c ****         index += 2;
+ 178              		.loc 1 99 9 is_stmt 1 view .LVU37
+ 179              		.loc 1 99 15 is_stmt 0 view .LVU38
+ 180 0026 0234     		adds	r4, r4, #2
+ 181              	.LVL20:
+ 182              	.L7:
+  85:Drivers/Radio/Src/RemoteControl.c ****         if (strcmp((const char *)&StructBuffer[index], "T") == 0) {
+ 183              		.loc 1 85 11 is_stmt 1 view .LVU39
+  85:Drivers/Radio/Src/RemoteControl.c ****         if (strcmp((const char *)&StructBuffer[index], "T") == 0) {
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\cc9fK6hT.s 			page 6
+
+
+ 184              		.loc 1 85 24 is_stmt 0 view .LVU40
+ 185 0028 2746     		mov	r7, r4
+ 186 002a 2301     		lsls	r3, r4, #4
+ 187 002c 05EB0416 		add	r6, r5, r4, lsl #4
+  85:Drivers/Radio/Src/RemoteControl.c ****         if (strcmp((const char *)&StructBuffer[index], "T") == 0) {
+ 188              		.loc 1 85 31 view .LVU41
+ 189 0030 E85C     		ldrb	r0, [r5, r3]	@ zero_extendqisi2
+  85:Drivers/Radio/Src/RemoteControl.c ****         if (strcmp((const char *)&StructBuffer[index], "T") == 0) {
+ 190              		.loc 1 85 11 view .LVU42
+ 191 0032 70B3     		cbz	r0, .L6
+  86:Drivers/Radio/Src/RemoteControl.c ****             Control->JoyStick.Thrust =
+ 192              		.loc 1 86 9 is_stmt 1 view .LVU43
+  86:Drivers/Radio/Src/RemoteControl.c ****             Control->JoyStick.Thrust =
+ 193              		.loc 1 86 13 is_stmt 0 view .LVU44
+ 194 0034 1949     		ldr	r1, .L18+4
+ 195 0036 3046     		mov	r0, r6
+ 196 0038 FFF7FEFF 		bl	strcmp
+ 197              	.LVL21:
+  86:Drivers/Radio/Src/RemoteControl.c ****             Control->JoyStick.Thrust =
+ 198              		.loc 1 86 12 view .LVU45
+ 199 003c 0028     		cmp	r0, #0
+ 200 003e EBD0     		beq	.L15
+  89:Drivers/Radio/Src/RemoteControl.c ****         } else if (strcmp((const char *)&StructBuffer[index], "R") == 0) {
+ 201              		.loc 1 89 16 is_stmt 1 view .LVU46
+  89:Drivers/Radio/Src/RemoteControl.c ****         } else if (strcmp((const char *)&StructBuffer[index], "R") == 0) {
+ 202              		.loc 1 89 20 is_stmt 0 view .LVU47
+ 203 0040 1749     		ldr	r1, .L18+8
+ 204 0042 3046     		mov	r0, r6
+ 205 0044 FFF7FEFF 		bl	strcmp
+ 206              	.LVL22:
+  89:Drivers/Radio/Src/RemoteControl.c ****         } else if (strcmp((const char *)&StructBuffer[index], "R") == 0) {
+ 207              		.loc 1 89 19 view .LVU48
+ 208 0048 90B1     		cbz	r0, .L16
+  92:Drivers/Radio/Src/RemoteControl.c ****             Control->JoyStick.Pitch =
+ 209              		.loc 1 92 16 is_stmt 1 view .LVU49
+  92:Drivers/Radio/Src/RemoteControl.c ****             Control->JoyStick.Pitch =
+ 210              		.loc 1 92 20 is_stmt 0 view .LVU50
+ 211 004a 1649     		ldr	r1, .L18+12
+ 212 004c 3046     		mov	r0, r6
+ 213 004e FFF7FEFF 		bl	strcmp
+ 214              	.LVL23:
+  92:Drivers/Radio/Src/RemoteControl.c ****             Control->JoyStick.Pitch =
+ 215              		.loc 1 92 19 view .LVU51
+ 216 0052 A8B1     		cbz	r0, .L17
+  95:Drivers/Radio/Src/RemoteControl.c ****             Control->JoyStick.Yaw =
+ 217              		.loc 1 95 16 is_stmt 1 view .LVU52
+  95:Drivers/Radio/Src/RemoteControl.c ****             Control->JoyStick.Yaw =
+ 218              		.loc 1 95 20 is_stmt 0 view .LVU53
+ 219 0054 1449     		ldr	r1, .L18+16
+ 220 0056 3046     		mov	r0, r6
+ 221 0058 FFF7FEFF 		bl	strcmp
+ 222              	.LVL24:
+  95:Drivers/Radio/Src/RemoteControl.c ****             Control->JoyStick.Yaw =
+ 223              		.loc 1 95 19 view .LVU54
+ 224 005c 0028     		cmp	r0, #0
+ 225 005e E2D1     		bne	.L9
+  96:Drivers/Radio/Src/RemoteControl.c ****                 atoi((const char *)&StructBuffer[index + 1]);
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\cc9fK6hT.s 			page 7
+
+
+ 226              		.loc 1 96 13 is_stmt 1 view .LVU55
+  97:Drivers/Radio/Src/RemoteControl.c ****         }
+ 227              		.loc 1 97 49 is_stmt 0 view .LVU56
+ 228 0060 781C     		adds	r0, r7, #1
+  97:Drivers/Radio/Src/RemoteControl.c ****         }
+ 229              		.loc 1 97 17 view .LVU57
+ 230 0062 05EB0010 		add	r0, r5, r0, lsl #4
+ 231 0066 FFF7FEFF 		bl	atoi
+ 232              	.LVL25:
+  96:Drivers/Radio/Src/RemoteControl.c ****                 atoi((const char *)&StructBuffer[index + 1]);
+ 233              		.loc 1 96 35 view .LVU58
+ 234 006a C8F80C00 		str	r0, [r8, #12]
+ 235 006e DAE7     		b	.L9
+ 236              	.L16:
+  90:Drivers/Radio/Src/RemoteControl.c ****                 atoi((const char *)&StructBuffer[index + 1]);
+ 237              		.loc 1 90 13 is_stmt 1 view .LVU59
+  91:Drivers/Radio/Src/RemoteControl.c ****         } else if (strcmp((const char *)&StructBuffer[index], "P") == 0) {
+ 238              		.loc 1 91 49 is_stmt 0 view .LVU60
+ 239 0070 781C     		adds	r0, r7, #1
+  91:Drivers/Radio/Src/RemoteControl.c ****         } else if (strcmp((const char *)&StructBuffer[index], "P") == 0) {
+ 240              		.loc 1 91 17 view .LVU61
+ 241 0072 05EB0010 		add	r0, r5, r0, lsl #4
+ 242 0076 FFF7FEFF 		bl	atoi
+ 243              	.LVL26:
+  90:Drivers/Radio/Src/RemoteControl.c ****                 atoi((const char *)&StructBuffer[index + 1]);
+ 244              		.loc 1 90 36 view .LVU62
+ 245 007a C8F80400 		str	r0, [r8, #4]
+ 246 007e D2E7     		b	.L9
+ 247              	.L17:
+  93:Drivers/Radio/Src/RemoteControl.c ****                 atoi((const char *)&StructBuffer[index + 1]);
+ 248              		.loc 1 93 13 is_stmt 1 view .LVU63
+  94:Drivers/Radio/Src/RemoteControl.c ****         } else if (strcmp((const char *)&StructBuffer[index], "Y") == 0) {
+ 249              		.loc 1 94 49 is_stmt 0 view .LVU64
+ 250 0080 781C     		adds	r0, r7, #1
+  94:Drivers/Radio/Src/RemoteControl.c ****         } else if (strcmp((const char *)&StructBuffer[index], "Y") == 0) {
+ 251              		.loc 1 94 17 view .LVU65
+ 252 0082 05EB0010 		add	r0, r5, r0, lsl #4
+ 253 0086 FFF7FEFF 		bl	atoi
+ 254              	.LVL27:
+  93:Drivers/Radio/Src/RemoteControl.c ****                 atoi((const char *)&StructBuffer[index + 1]);
+ 255              		.loc 1 93 37 view .LVU66
+ 256 008a C8F80800 		str	r0, [r8, #8]
+ 257 008e CAE7     		b	.L9
+ 258              	.LVL28:
+ 259              	.L13:
+  84:Drivers/Radio/Src/RemoteControl.c ****     while (StructBuffer[index][0] != '\0') {
+ 260              		.loc 1 84 16 view .LVU67
+ 261 0090 0220     		movs	r0, #2
+ 262              	.LVL29:
+ 263              	.L6:
+ 100:Drivers/Radio/Src/RemoteControl.c ****     }
+ 101:Drivers/Radio/Src/RemoteControl.c ****     return CONTROL_OK;
+ 102:Drivers/Radio/Src/RemoteControl.c **** }
+ 264              		.loc 1 102 1 view .LVU68
+ 265 0092 BDE8F081 		pop	{r4, r5, r6, r7, r8, pc}
+ 266              	.LVL30:
+ 267              	.L19:
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\cc9fK6hT.s 			page 8
+
+
+ 268              		.loc 1 102 1 view .LVU69
+ 269 0096 00BF     		.align	2
+ 270              	.L18:
+ 271 0098 00000000 		.word	.LC0
+ 272 009c 04000000 		.word	.LC1
+ 273 00a0 08000000 		.word	.LC2
+ 274 00a4 0C000000 		.word	.LC3
+ 275 00a8 10000000 		.word	.LC4
+ 276              		.cfi_endproc
+ 277              	.LFE73:
+ 279              		.section	.rodata.Decode_PID.str1.4,"aMS",%progbits,1
+ 280              		.align	2
+ 281              	.LC5:
+ 282 0000 50494400 		.ascii	"PID\000"
+ 283              		.align	2
+ 284              	.LC6:
+ 285 0004 505200   		.ascii	"PR\000"
+ 286              		.global	__aeabi_d2f
+ 287 0007 00       		.align	2
+ 288              	.LC7:
+ 289 0008 495200   		.ascii	"IR\000"
+ 290 000b 00       		.align	2
+ 291              	.LC8:
+ 292 000c 445200   		.ascii	"DR\000"
+ 293 000f 00       		.align	2
+ 294              	.LC9:
+ 295 0010 505000   		.ascii	"PP\000"
+ 296 0013 00       		.align	2
+ 297              	.LC10:
+ 298 0014 495000   		.ascii	"IP\000"
+ 299 0017 00       		.align	2
+ 300              	.LC11:
+ 301 0018 445000   		.ascii	"DP\000"
+ 302 001b 00       		.align	2
+ 303              	.LC12:
+ 304 001c 505900   		.ascii	"PY\000"
+ 305 001f 00       		.align	2
+ 306              	.LC13:
+ 307 0020 495900   		.ascii	"IY\000"
+ 308 0023 00       		.align	2
+ 309              	.LC14:
+ 310 0024 445900   		.ascii	"DY\000"
+ 311 0027 00       		.align	2
+ 312              	.LC15:
+ 313 0028 504100   		.ascii	"PA\000"
+ 314 002b 00       		.align	2
+ 315              	.LC16:
+ 316 002c 494100   		.ascii	"IA\000"
+ 317 002f 00       		.align	2
+ 318              	.LC17:
+ 319 0030 444100   		.ascii	"DA\000"
+ 320 0033 00       		.align	2
+ 321              	.LC18:
+ 322 0034 504700   		.ascii	"PG\000"
+ 323 0037 00       		.align	2
+ 324              	.LC19:
+ 325 0038 494700   		.ascii	"IG\000"
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\cc9fK6hT.s 			page 9
+
+
+ 326 003b 00       		.align	2
+ 327              	.LC20:
+ 328 003c 444700   		.ascii	"DG\000"
+ 329              		.section	.text.Decode_PID,"ax",%progbits
+ 330              		.align	1
+ 331              		.global	Decode_PID
+ 332              		.syntax unified
+ 333              		.thumb
+ 334              		.thumb_func
+ 336              	Decode_PID:
+ 337              	.LVL31:
+ 338              	.LFB74:
+ 103:Drivers/Radio/Src/RemoteControl.c **** 
+ 104:Drivers/Radio/Src/RemoteControl.c **** /**
+ 105:Drivers/Radio/Src/RemoteControl.c ****  * @brief Decode the PID message.
+ 106:Drivers/Radio/Src/RemoteControl.c ****  * @param Control The Control Pointer.
+ 107:Drivers/Radio/Src/RemoteControl.c ****  * @param StructBuffer The Structural Buffer.
+ 108:Drivers/Radio/Src/RemoteControl.c ****  * @retval ControlStatus_t
+ 109:Drivers/Radio/Src/RemoteControl.c ****  */
+ 110:Drivers/Radio/Src/RemoteControl.c **** ControlStatus_t Decode_PID(ControlInfo_t *Control,
+ 111:Drivers/Radio/Src/RemoteControl.c ****                            uint8_t (*StructBuffer)[COLUMNS]) {
+ 339              		.loc 1 111 62 is_stmt 1 view -0
+ 340              		.cfi_startproc
+ 341              		@ args = 0, pretend = 0, frame = 0
+ 342              		@ frame_needed = 0, uses_anonymous_args = 0
+ 343              		.loc 1 111 62 is_stmt 0 view .LVU71
+ 344 0000 2DE9F041 		push	{r4, r5, r6, r7, r8, lr}
+ 345              	.LCFI4:
+ 346              		.cfi_def_cfa_offset 24
+ 347              		.cfi_offset 4, -24
+ 348              		.cfi_offset 5, -20
+ 349              		.cfi_offset 6, -16
+ 350              		.cfi_offset 7, -12
+ 351              		.cfi_offset 8, -8
+ 352              		.cfi_offset 14, -4
+ 353 0004 8046     		mov	r8, r0
+ 354 0006 0F46     		mov	r7, r1
+ 112:Drivers/Radio/Src/RemoteControl.c ****     int index = 1;
+ 355              		.loc 1 112 5 is_stmt 1 view .LVU72
+ 356              	.LVL32:
+ 113:Drivers/Radio/Src/RemoteControl.c ****     if (strcmp((const char *)&StructBuffer[0], "PID") != 0)
+ 357              		.loc 1 113 5 view .LVU73
+ 358              		.loc 1 113 9 is_stmt 0 view .LVU74
+ 359 0008 8349     		ldr	r1, .L55
+ 360              	.LVL33:
+ 361              		.loc 1 113 9 view .LVU75
+ 362 000a 3846     		mov	r0, r7
+ 363              	.LVL34:
+ 364              		.loc 1 113 9 view .LVU76
+ 365 000c FFF7FEFF 		bl	strcmp
+ 366              	.LVL35:
+ 367              		.loc 1 113 8 view .LVU77
+ 368 0010 0028     		cmp	r0, #0
+ 369 0012 40F0FD80 		bne	.L39
+ 112:Drivers/Radio/Src/RemoteControl.c ****     int index = 1;
+ 370              		.loc 1 112 9 view .LVU78
+ 371 0016 0124     		movs	r4, #1
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\cc9fK6hT.s 			page 10
+
+
+ 372 0018 09E0     		b	.L22
+ 373              	.LVL36:
+ 374              	.L41:
+ 114:Drivers/Radio/Src/RemoteControl.c ****         return CONTROL_ERROR;
+ 115:Drivers/Radio/Src/RemoteControl.c ****     while (StructBuffer[index][0] != '\0') {
+ 116:Drivers/Radio/Src/RemoteControl.c ****         if (strcmp((const char *)&StructBuffer[index], "PR") == 0) {
+ 117:Drivers/Radio/Src/RemoteControl.c ****             Control->ControlPid.Roll.P =
+ 375              		.loc 1 117 13 is_stmt 1 view .LVU79
+ 118:Drivers/Radio/Src/RemoteControl.c ****                 atof((const char *)&StructBuffer[index + 1]);
+ 376              		.loc 1 118 49 is_stmt 0 view .LVU80
+ 377 001a 701C     		adds	r0, r6, #1
+ 378              		.loc 1 118 17 view .LVU81
+ 379 001c 07EB0010 		add	r0, r7, r0, lsl #4
+ 380 0020 FFF7FEFF 		bl	atof
+ 381              	.LVL37:
+ 382 0024 FFF7FEFF 		bl	__aeabi_d2f
+ 383              	.LVL38:
+ 117:Drivers/Radio/Src/RemoteControl.c ****                 atof((const char *)&StructBuffer[index + 1]);
+ 384              		.loc 1 117 40 view .LVU82
+ 385 0028 C8F81000 		str	r0, [r8, #16]	@ float
+ 386              	.L24:
+ 119:Drivers/Radio/Src/RemoteControl.c ****         } else if (strcmp((const char *)&StructBuffer[index], "IR") == 0) {
+ 120:Drivers/Radio/Src/RemoteControl.c ****             Control->ControlPid.Roll.I =
+ 121:Drivers/Radio/Src/RemoteControl.c ****                 atof((const char *)&StructBuffer[index + 1]);
+ 122:Drivers/Radio/Src/RemoteControl.c ****         } else if (strcmp((const char *)&StructBuffer[index], "DR") == 0) {
+ 123:Drivers/Radio/Src/RemoteControl.c ****             Control->ControlPid.Roll.D =
+ 124:Drivers/Radio/Src/RemoteControl.c ****                 atof((const char *)&StructBuffer[index + 1]);
+ 125:Drivers/Radio/Src/RemoteControl.c ****         } else if (strcmp((const char *)&StructBuffer[index], "PP") == 0) {
+ 126:Drivers/Radio/Src/RemoteControl.c ****             Control->ControlPid.Pitch.P =
+ 127:Drivers/Radio/Src/RemoteControl.c ****                 atof((const char *)&StructBuffer[index + 1]);
+ 128:Drivers/Radio/Src/RemoteControl.c ****         } else if (strcmp((const char *)&StructBuffer[index], "IP") == 0) {
+ 129:Drivers/Radio/Src/RemoteControl.c ****             Control->ControlPid.Pitch.I =
+ 130:Drivers/Radio/Src/RemoteControl.c ****                 atof((const char *)&StructBuffer[index + 1]);
+ 131:Drivers/Radio/Src/RemoteControl.c ****         } else if (strcmp((const char *)&StructBuffer[index], "DP") == 0) {
+ 132:Drivers/Radio/Src/RemoteControl.c ****             Control->ControlPid.Pitch.D =
+ 133:Drivers/Radio/Src/RemoteControl.c ****                 atof((const char *)&StructBuffer[index + 1]);
+ 134:Drivers/Radio/Src/RemoteControl.c ****         } else if (strcmp((const char *)&StructBuffer[index], "PY") == 0) {
+ 135:Drivers/Radio/Src/RemoteControl.c ****             Control->ControlPid.Yaw.P =
+ 136:Drivers/Radio/Src/RemoteControl.c ****                 atof((const char *)&StructBuffer[index + 1]);
+ 137:Drivers/Radio/Src/RemoteControl.c ****         } else if (strcmp((const char *)&StructBuffer[index], "IY") == 0) {
+ 138:Drivers/Radio/Src/RemoteControl.c ****             Control->ControlPid.Yaw.I =
+ 139:Drivers/Radio/Src/RemoteControl.c ****                 atof((const char *)&StructBuffer[index + 1]);
+ 140:Drivers/Radio/Src/RemoteControl.c ****         } else if (strcmp((const char *)&StructBuffer[index], "DY") == 0) {
+ 141:Drivers/Radio/Src/RemoteControl.c ****             Control->ControlPid.Yaw.D =
+ 142:Drivers/Radio/Src/RemoteControl.c ****                 atof((const char *)&StructBuffer[index + 1]);
+ 143:Drivers/Radio/Src/RemoteControl.c ****         } else if (strcmp((const char *)&StructBuffer[index], "PA") == 0) {
+ 144:Drivers/Radio/Src/RemoteControl.c ****             Control->ControlPid.Altitude.P =
+ 145:Drivers/Radio/Src/RemoteControl.c ****                 atof((const char *)&StructBuffer[index + 1]);
+ 146:Drivers/Radio/Src/RemoteControl.c ****         } else if (strcmp((const char *)&StructBuffer[index], "IA") == 0) {
+ 147:Drivers/Radio/Src/RemoteControl.c ****             Control->ControlPid.Altitude.I =
+ 148:Drivers/Radio/Src/RemoteControl.c ****                 atof((const char *)&StructBuffer[index + 1]);
+ 149:Drivers/Radio/Src/RemoteControl.c ****         } else if (strcmp((const char *)&StructBuffer[index], "DA") == 0) {
+ 150:Drivers/Radio/Src/RemoteControl.c ****             Control->ControlPid.Altitude.D =
+ 151:Drivers/Radio/Src/RemoteControl.c ****                 atof((const char *)&StructBuffer[index + 1]);
+ 152:Drivers/Radio/Src/RemoteControl.c ****         } else if (strcmp((const char *)&StructBuffer[index], "PG") == 0) {
+ 153:Drivers/Radio/Src/RemoteControl.c ****             Control->ControlPid.Gps.P =
+ 154:Drivers/Radio/Src/RemoteControl.c ****                 atof((const char *)&StructBuffer[index + 1]);
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\cc9fK6hT.s 			page 11
+
+
+ 155:Drivers/Radio/Src/RemoteControl.c ****         } else if (strcmp((const char *)&StructBuffer[index], "IG") == 0) {
+ 156:Drivers/Radio/Src/RemoteControl.c ****             Control->ControlPid.Gps.I =
+ 157:Drivers/Radio/Src/RemoteControl.c ****                 atof((const char *)&StructBuffer[index + 1]);
+ 158:Drivers/Radio/Src/RemoteControl.c ****         } else if (strcmp((const char *)&StructBuffer[index], "DG") == 0) {
+ 159:Drivers/Radio/Src/RemoteControl.c ****             Control->ControlPid.Gps.D =
+ 160:Drivers/Radio/Src/RemoteControl.c ****                 atof((const char *)&StructBuffer[index + 1]);
+ 161:Drivers/Radio/Src/RemoteControl.c ****         }
+ 162:Drivers/Radio/Src/RemoteControl.c ****         index += 2;
+ 387              		.loc 1 162 9 is_stmt 1 view .LVU83
+ 388              		.loc 1 162 15 is_stmt 0 view .LVU84
+ 389 002c 0234     		adds	r4, r4, #2
+ 390              	.LVL39:
+ 391              	.L22:
+ 115:Drivers/Radio/Src/RemoteControl.c ****         if (strcmp((const char *)&StructBuffer[index], "PR") == 0) {
+ 392              		.loc 1 115 11 is_stmt 1 view .LVU85
+ 115:Drivers/Radio/Src/RemoteControl.c ****         if (strcmp((const char *)&StructBuffer[index], "PR") == 0) {
+ 393              		.loc 1 115 24 is_stmt 0 view .LVU86
+ 394 002e 2646     		mov	r6, r4
+ 395 0030 2301     		lsls	r3, r4, #4
+ 396 0032 07EB0415 		add	r5, r7, r4, lsl #4
+ 115:Drivers/Radio/Src/RemoteControl.c ****         if (strcmp((const char *)&StructBuffer[index], "PR") == 0) {
+ 397              		.loc 1 115 31 view .LVU87
+ 398 0036 F85C     		ldrb	r0, [r7, r3]	@ zero_extendqisi2
+ 115:Drivers/Radio/Src/RemoteControl.c ****         if (strcmp((const char *)&StructBuffer[index], "PR") == 0) {
+ 399              		.loc 1 115 11 view .LVU88
+ 400 0038 0028     		cmp	r0, #0
+ 401 003a 00F0EA80 		beq	.L21
+ 116:Drivers/Radio/Src/RemoteControl.c ****             Control->ControlPid.Roll.P =
+ 402              		.loc 1 116 9 is_stmt 1 view .LVU89
+ 116:Drivers/Radio/Src/RemoteControl.c ****             Control->ControlPid.Roll.P =
+ 403              		.loc 1 116 13 is_stmt 0 view .LVU90
+ 404 003e 7749     		ldr	r1, .L55+4
+ 405 0040 2846     		mov	r0, r5
+ 406 0042 FFF7FEFF 		bl	strcmp
+ 407              	.LVL40:
+ 116:Drivers/Radio/Src/RemoteControl.c ****             Control->ControlPid.Roll.P =
+ 408              		.loc 1 116 12 view .LVU91
+ 409 0046 0028     		cmp	r0, #0
+ 410 0048 E7D0     		beq	.L41
+ 119:Drivers/Radio/Src/RemoteControl.c ****         } else if (strcmp((const char *)&StructBuffer[index], "IR") == 0) {
+ 411              		.loc 1 119 16 is_stmt 1 view .LVU92
+ 119:Drivers/Radio/Src/RemoteControl.c ****         } else if (strcmp((const char *)&StructBuffer[index], "IR") == 0) {
+ 412              		.loc 1 119 20 is_stmt 0 view .LVU93
+ 413 004a 7549     		ldr	r1, .L55+8
+ 414 004c 2846     		mov	r0, r5
+ 415 004e FFF7FEFF 		bl	strcmp
+ 416              	.LVL41:
+ 119:Drivers/Radio/Src/RemoteControl.c ****         } else if (strcmp((const char *)&StructBuffer[index], "IR") == 0) {
+ 417              		.loc 1 119 19 view .LVU94
+ 418 0052 0028     		cmp	r0, #0
+ 419 0054 5AD0     		beq	.L42
+ 122:Drivers/Radio/Src/RemoteControl.c ****             Control->ControlPid.Roll.D =
+ 420              		.loc 1 122 16 is_stmt 1 view .LVU95
+ 122:Drivers/Radio/Src/RemoteControl.c ****             Control->ControlPid.Roll.D =
+ 421              		.loc 1 122 20 is_stmt 0 view .LVU96
+ 422 0056 7349     		ldr	r1, .L55+12
+ 423 0058 2846     		mov	r0, r5
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\cc9fK6hT.s 			page 12
+
+
+ 424 005a FFF7FEFF 		bl	strcmp
+ 425              	.LVL42:
+ 122:Drivers/Radio/Src/RemoteControl.c ****             Control->ControlPid.Roll.D =
+ 426              		.loc 1 122 19 view .LVU97
+ 427 005e 0028     		cmp	r0, #0
+ 428 0060 5ED0     		beq	.L43
+ 125:Drivers/Radio/Src/RemoteControl.c ****             Control->ControlPid.Pitch.P =
+ 429              		.loc 1 125 16 is_stmt 1 view .LVU98
+ 125:Drivers/Radio/Src/RemoteControl.c ****             Control->ControlPid.Pitch.P =
+ 430              		.loc 1 125 20 is_stmt 0 view .LVU99
+ 431 0062 7149     		ldr	r1, .L55+16
+ 432 0064 2846     		mov	r0, r5
+ 433 0066 FFF7FEFF 		bl	strcmp
+ 434              	.LVL43:
+ 125:Drivers/Radio/Src/RemoteControl.c ****             Control->ControlPid.Pitch.P =
+ 435              		.loc 1 125 19 view .LVU100
+ 436 006a 0028     		cmp	r0, #0
+ 437 006c 62D0     		beq	.L44
+ 128:Drivers/Radio/Src/RemoteControl.c ****             Control->ControlPid.Pitch.I =
+ 438              		.loc 1 128 16 is_stmt 1 view .LVU101
+ 128:Drivers/Radio/Src/RemoteControl.c ****             Control->ControlPid.Pitch.I =
+ 439              		.loc 1 128 20 is_stmt 0 view .LVU102
+ 440 006e 6F49     		ldr	r1, .L55+20
+ 441 0070 2846     		mov	r0, r5
+ 442 0072 FFF7FEFF 		bl	strcmp
+ 443              	.LVL44:
+ 128:Drivers/Radio/Src/RemoteControl.c ****             Control->ControlPid.Pitch.I =
+ 444              		.loc 1 128 19 view .LVU103
+ 445 0076 0028     		cmp	r0, #0
+ 446 0078 66D0     		beq	.L45
+ 131:Drivers/Radio/Src/RemoteControl.c ****             Control->ControlPid.Pitch.D =
+ 447              		.loc 1 131 16 is_stmt 1 view .LVU104
+ 131:Drivers/Radio/Src/RemoteControl.c ****             Control->ControlPid.Pitch.D =
+ 448              		.loc 1 131 20 is_stmt 0 view .LVU105
+ 449 007a 6D49     		ldr	r1, .L55+24
+ 450 007c 2846     		mov	r0, r5
+ 451 007e FFF7FEFF 		bl	strcmp
+ 452              	.LVL45:
+ 131:Drivers/Radio/Src/RemoteControl.c ****             Control->ControlPid.Pitch.D =
+ 453              		.loc 1 131 19 view .LVU106
+ 454 0082 0028     		cmp	r0, #0
+ 455 0084 6AD0     		beq	.L46
+ 134:Drivers/Radio/Src/RemoteControl.c ****             Control->ControlPid.Yaw.P =
+ 456              		.loc 1 134 16 is_stmt 1 view .LVU107
+ 134:Drivers/Radio/Src/RemoteControl.c ****             Control->ControlPid.Yaw.P =
+ 457              		.loc 1 134 20 is_stmt 0 view .LVU108
+ 458 0086 6B49     		ldr	r1, .L55+28
+ 459 0088 2846     		mov	r0, r5
+ 460 008a FFF7FEFF 		bl	strcmp
+ 461              	.LVL46:
+ 134:Drivers/Radio/Src/RemoteControl.c ****             Control->ControlPid.Yaw.P =
+ 462              		.loc 1 134 19 view .LVU109
+ 463 008e 0028     		cmp	r0, #0
+ 464 0090 6ED0     		beq	.L47
+ 137:Drivers/Radio/Src/RemoteControl.c ****             Control->ControlPid.Yaw.I =
+ 465              		.loc 1 137 16 is_stmt 1 view .LVU110
+ 137:Drivers/Radio/Src/RemoteControl.c ****             Control->ControlPid.Yaw.I =
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\cc9fK6hT.s 			page 13
+
+
+ 466              		.loc 1 137 20 is_stmt 0 view .LVU111
+ 467 0092 6949     		ldr	r1, .L55+32
+ 468 0094 2846     		mov	r0, r5
+ 469 0096 FFF7FEFF 		bl	strcmp
+ 470              	.LVL47:
+ 137:Drivers/Radio/Src/RemoteControl.c ****             Control->ControlPid.Yaw.I =
+ 471              		.loc 1 137 19 view .LVU112
+ 472 009a 0028     		cmp	r0, #0
+ 473 009c 72D0     		beq	.L48
+ 140:Drivers/Radio/Src/RemoteControl.c ****             Control->ControlPid.Yaw.D =
+ 474              		.loc 1 140 16 is_stmt 1 view .LVU113
+ 140:Drivers/Radio/Src/RemoteControl.c ****             Control->ControlPid.Yaw.D =
+ 475              		.loc 1 140 20 is_stmt 0 view .LVU114
+ 476 009e 6749     		ldr	r1, .L55+36
+ 477 00a0 2846     		mov	r0, r5
+ 478 00a2 FFF7FEFF 		bl	strcmp
+ 479              	.LVL48:
+ 140:Drivers/Radio/Src/RemoteControl.c ****             Control->ControlPid.Yaw.D =
+ 480              		.loc 1 140 19 view .LVU115
+ 481 00a6 0028     		cmp	r0, #0
+ 482 00a8 76D0     		beq	.L49
+ 143:Drivers/Radio/Src/RemoteControl.c ****             Control->ControlPid.Altitude.P =
+ 483              		.loc 1 143 16 is_stmt 1 view .LVU116
+ 143:Drivers/Radio/Src/RemoteControl.c ****             Control->ControlPid.Altitude.P =
+ 484              		.loc 1 143 20 is_stmt 0 view .LVU117
+ 485 00aa 6549     		ldr	r1, .L55+40
+ 486 00ac 2846     		mov	r0, r5
+ 487 00ae FFF7FEFF 		bl	strcmp
+ 488              	.LVL49:
+ 143:Drivers/Radio/Src/RemoteControl.c ****             Control->ControlPid.Altitude.P =
+ 489              		.loc 1 143 19 view .LVU118
+ 490 00b2 0028     		cmp	r0, #0
+ 491 00b4 7AD0     		beq	.L50
+ 146:Drivers/Radio/Src/RemoteControl.c ****             Control->ControlPid.Altitude.I =
+ 492              		.loc 1 146 16 is_stmt 1 view .LVU119
+ 146:Drivers/Radio/Src/RemoteControl.c ****             Control->ControlPid.Altitude.I =
+ 493              		.loc 1 146 20 is_stmt 0 view .LVU120
+ 494 00b6 6349     		ldr	r1, .L55+44
+ 495 00b8 2846     		mov	r0, r5
+ 496 00ba FFF7FEFF 		bl	strcmp
+ 497              	.LVL50:
+ 146:Drivers/Radio/Src/RemoteControl.c ****             Control->ControlPid.Altitude.I =
+ 498              		.loc 1 146 19 view .LVU121
+ 499 00be 0028     		cmp	r0, #0
+ 500 00c0 7ED0     		beq	.L51
+ 149:Drivers/Radio/Src/RemoteControl.c ****             Control->ControlPid.Altitude.D =
+ 501              		.loc 1 149 16 is_stmt 1 view .LVU122
+ 149:Drivers/Radio/Src/RemoteControl.c ****             Control->ControlPid.Altitude.D =
+ 502              		.loc 1 149 20 is_stmt 0 view .LVU123
+ 503 00c2 6149     		ldr	r1, .L55+48
+ 504 00c4 2846     		mov	r0, r5
+ 505 00c6 FFF7FEFF 		bl	strcmp
+ 506              	.LVL51:
+ 149:Drivers/Radio/Src/RemoteControl.c ****             Control->ControlPid.Altitude.D =
+ 507              		.loc 1 149 19 view .LVU124
+ 508 00ca 0028     		cmp	r0, #0
+ 509 00cc 00F08280 		beq	.L52
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\cc9fK6hT.s 			page 14
+
+
+ 152:Drivers/Radio/Src/RemoteControl.c ****             Control->ControlPid.Gps.P =
+ 510              		.loc 1 152 16 is_stmt 1 view .LVU125
+ 152:Drivers/Radio/Src/RemoteControl.c ****             Control->ControlPid.Gps.P =
+ 511              		.loc 1 152 20 is_stmt 0 view .LVU126
+ 512 00d0 5E49     		ldr	r1, .L55+52
+ 513 00d2 2846     		mov	r0, r5
+ 514 00d4 FFF7FEFF 		bl	strcmp
+ 515              	.LVL52:
+ 152:Drivers/Radio/Src/RemoteControl.c ****             Control->ControlPid.Gps.P =
+ 516              		.loc 1 152 19 view .LVU127
+ 517 00d8 0028     		cmp	r0, #0
+ 518 00da 00F08580 		beq	.L53
+ 155:Drivers/Radio/Src/RemoteControl.c ****             Control->ControlPid.Gps.I =
+ 519              		.loc 1 155 16 is_stmt 1 view .LVU128
+ 155:Drivers/Radio/Src/RemoteControl.c ****             Control->ControlPid.Gps.I =
+ 520              		.loc 1 155 20 is_stmt 0 view .LVU129
+ 521 00de 5C49     		ldr	r1, .L55+56
+ 522 00e0 2846     		mov	r0, r5
+ 523 00e2 FFF7FEFF 		bl	strcmp
+ 524              	.LVL53:
+ 155:Drivers/Radio/Src/RemoteControl.c ****             Control->ControlPid.Gps.I =
+ 525              		.loc 1 155 19 view .LVU130
+ 526 00e6 0028     		cmp	r0, #0
+ 527 00e8 00F08880 		beq	.L54
+ 158:Drivers/Radio/Src/RemoteControl.c ****             Control->ControlPid.Gps.D =
+ 528              		.loc 1 158 16 is_stmt 1 view .LVU131
+ 158:Drivers/Radio/Src/RemoteControl.c ****             Control->ControlPid.Gps.D =
+ 529              		.loc 1 158 20 is_stmt 0 view .LVU132
+ 530 00ec 5949     		ldr	r1, .L55+60
+ 531 00ee 2846     		mov	r0, r5
+ 532 00f0 FFF7FEFF 		bl	strcmp
+ 533              	.LVL54:
+ 158:Drivers/Radio/Src/RemoteControl.c ****             Control->ControlPid.Gps.D =
+ 534              		.loc 1 158 19 view .LVU133
+ 535 00f4 0028     		cmp	r0, #0
+ 536 00f6 99D1     		bne	.L24
+ 159:Drivers/Radio/Src/RemoteControl.c ****                 atof((const char *)&StructBuffer[index + 1]);
+ 537              		.loc 1 159 13 is_stmt 1 view .LVU134
+ 160:Drivers/Radio/Src/RemoteControl.c ****         }
+ 538              		.loc 1 160 49 is_stmt 0 view .LVU135
+ 539 00f8 701C     		adds	r0, r6, #1
+ 160:Drivers/Radio/Src/RemoteControl.c ****         }
+ 540              		.loc 1 160 17 view .LVU136
+ 541 00fa 07EB0010 		add	r0, r7, r0, lsl #4
+ 542 00fe FFF7FEFF 		bl	atof
+ 543              	.LVL55:
+ 544 0102 FFF7FEFF 		bl	__aeabi_d2f
+ 545              	.LVL56:
+ 159:Drivers/Radio/Src/RemoteControl.c ****                 atof((const char *)&StructBuffer[index + 1]);
+ 546              		.loc 1 159 39 view .LVU137
+ 547 0106 C8F84800 		str	r0, [r8, #72]	@ float
+ 548 010a 8FE7     		b	.L24
+ 549              	.L42:
+ 120:Drivers/Radio/Src/RemoteControl.c ****                 atof((const char *)&StructBuffer[index + 1]);
+ 550              		.loc 1 120 13 is_stmt 1 view .LVU138
+ 121:Drivers/Radio/Src/RemoteControl.c ****         } else if (strcmp((const char *)&StructBuffer[index], "DR") == 0) {
+ 551              		.loc 1 121 49 is_stmt 0 view .LVU139
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\cc9fK6hT.s 			page 15
+
+
+ 552 010c 701C     		adds	r0, r6, #1
+ 121:Drivers/Radio/Src/RemoteControl.c ****         } else if (strcmp((const char *)&StructBuffer[index], "DR") == 0) {
+ 553              		.loc 1 121 17 view .LVU140
+ 554 010e 07EB0010 		add	r0, r7, r0, lsl #4
+ 555 0112 FFF7FEFF 		bl	atof
+ 556              	.LVL57:
+ 557 0116 FFF7FEFF 		bl	__aeabi_d2f
+ 558              	.LVL58:
+ 120:Drivers/Radio/Src/RemoteControl.c ****                 atof((const char *)&StructBuffer[index + 1]);
+ 559              		.loc 1 120 40 view .LVU141
+ 560 011a C8F81400 		str	r0, [r8, #20]	@ float
+ 561 011e 85E7     		b	.L24
+ 562              	.L43:
+ 123:Drivers/Radio/Src/RemoteControl.c ****                 atof((const char *)&StructBuffer[index + 1]);
+ 563              		.loc 1 123 13 is_stmt 1 view .LVU142
+ 124:Drivers/Radio/Src/RemoteControl.c ****         } else if (strcmp((const char *)&StructBuffer[index], "PP") == 0) {
+ 564              		.loc 1 124 49 is_stmt 0 view .LVU143
+ 565 0120 701C     		adds	r0, r6, #1
+ 124:Drivers/Radio/Src/RemoteControl.c ****         } else if (strcmp((const char *)&StructBuffer[index], "PP") == 0) {
+ 566              		.loc 1 124 17 view .LVU144
+ 567 0122 07EB0010 		add	r0, r7, r0, lsl #4
+ 568 0126 FFF7FEFF 		bl	atof
+ 569              	.LVL59:
+ 570 012a FFF7FEFF 		bl	__aeabi_d2f
+ 571              	.LVL60:
+ 123:Drivers/Radio/Src/RemoteControl.c ****                 atof((const char *)&StructBuffer[index + 1]);
+ 572              		.loc 1 123 40 view .LVU145
+ 573 012e C8F81800 		str	r0, [r8, #24]	@ float
+ 574 0132 7BE7     		b	.L24
+ 575              	.L44:
+ 126:Drivers/Radio/Src/RemoteControl.c ****                 atof((const char *)&StructBuffer[index + 1]);
+ 576              		.loc 1 126 13 is_stmt 1 view .LVU146
+ 127:Drivers/Radio/Src/RemoteControl.c ****         } else if (strcmp((const char *)&StructBuffer[index], "IP") == 0) {
+ 577              		.loc 1 127 49 is_stmt 0 view .LVU147
+ 578 0134 701C     		adds	r0, r6, #1
+ 127:Drivers/Radio/Src/RemoteControl.c ****         } else if (strcmp((const char *)&StructBuffer[index], "IP") == 0) {
+ 579              		.loc 1 127 17 view .LVU148
+ 580 0136 07EB0010 		add	r0, r7, r0, lsl #4
+ 581 013a FFF7FEFF 		bl	atof
+ 582              	.LVL61:
+ 583 013e FFF7FEFF 		bl	__aeabi_d2f
+ 584              	.LVL62:
+ 126:Drivers/Radio/Src/RemoteControl.c ****                 atof((const char *)&StructBuffer[index + 1]);
+ 585              		.loc 1 126 41 view .LVU149
+ 586 0142 C8F81C00 		str	r0, [r8, #28]	@ float
+ 587 0146 71E7     		b	.L24
+ 588              	.L45:
+ 129:Drivers/Radio/Src/RemoteControl.c ****                 atof((const char *)&StructBuffer[index + 1]);
+ 589              		.loc 1 129 13 is_stmt 1 view .LVU150
+ 130:Drivers/Radio/Src/RemoteControl.c ****         } else if (strcmp((const char *)&StructBuffer[index], "DP") == 0) {
+ 590              		.loc 1 130 49 is_stmt 0 view .LVU151
+ 591 0148 701C     		adds	r0, r6, #1
+ 130:Drivers/Radio/Src/RemoteControl.c ****         } else if (strcmp((const char *)&StructBuffer[index], "DP") == 0) {
+ 592              		.loc 1 130 17 view .LVU152
+ 593 014a 07EB0010 		add	r0, r7, r0, lsl #4
+ 594 014e FFF7FEFF 		bl	atof
+ 595              	.LVL63:
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\cc9fK6hT.s 			page 16
+
+
+ 596 0152 FFF7FEFF 		bl	__aeabi_d2f
+ 597              	.LVL64:
+ 129:Drivers/Radio/Src/RemoteControl.c ****                 atof((const char *)&StructBuffer[index + 1]);
+ 598              		.loc 1 129 41 view .LVU153
+ 599 0156 C8F82000 		str	r0, [r8, #32]	@ float
+ 600 015a 67E7     		b	.L24
+ 601              	.L46:
+ 132:Drivers/Radio/Src/RemoteControl.c ****                 atof((const char *)&StructBuffer[index + 1]);
+ 602              		.loc 1 132 13 is_stmt 1 view .LVU154
+ 133:Drivers/Radio/Src/RemoteControl.c ****         } else if (strcmp((const char *)&StructBuffer[index], "PY") == 0) {
+ 603              		.loc 1 133 49 is_stmt 0 view .LVU155
+ 604 015c 701C     		adds	r0, r6, #1
+ 133:Drivers/Radio/Src/RemoteControl.c ****         } else if (strcmp((const char *)&StructBuffer[index], "PY") == 0) {
+ 605              		.loc 1 133 17 view .LVU156
+ 606 015e 07EB0010 		add	r0, r7, r0, lsl #4
+ 607 0162 FFF7FEFF 		bl	atof
+ 608              	.LVL65:
+ 609 0166 FFF7FEFF 		bl	__aeabi_d2f
+ 610              	.LVL66:
+ 132:Drivers/Radio/Src/RemoteControl.c ****                 atof((const char *)&StructBuffer[index + 1]);
+ 611              		.loc 1 132 41 view .LVU157
+ 612 016a C8F82400 		str	r0, [r8, #36]	@ float
+ 613 016e 5DE7     		b	.L24
+ 614              	.L47:
+ 135:Drivers/Radio/Src/RemoteControl.c ****                 atof((const char *)&StructBuffer[index + 1]);
+ 615              		.loc 1 135 13 is_stmt 1 view .LVU158
+ 136:Drivers/Radio/Src/RemoteControl.c ****         } else if (strcmp((const char *)&StructBuffer[index], "IY") == 0) {
+ 616              		.loc 1 136 49 is_stmt 0 view .LVU159
+ 617 0170 701C     		adds	r0, r6, #1
+ 136:Drivers/Radio/Src/RemoteControl.c ****         } else if (strcmp((const char *)&StructBuffer[index], "IY") == 0) {
+ 618              		.loc 1 136 17 view .LVU160
+ 619 0172 07EB0010 		add	r0, r7, r0, lsl #4
+ 620 0176 FFF7FEFF 		bl	atof
+ 621              	.LVL67:
+ 622 017a FFF7FEFF 		bl	__aeabi_d2f
+ 623              	.LVL68:
+ 135:Drivers/Radio/Src/RemoteControl.c ****                 atof((const char *)&StructBuffer[index + 1]);
+ 624              		.loc 1 135 39 view .LVU161
+ 625 017e C8F82800 		str	r0, [r8, #40]	@ float
+ 626 0182 53E7     		b	.L24
+ 627              	.L48:
+ 138:Drivers/Radio/Src/RemoteControl.c ****                 atof((const char *)&StructBuffer[index + 1]);
+ 628              		.loc 1 138 13 is_stmt 1 view .LVU162
+ 139:Drivers/Radio/Src/RemoteControl.c ****         } else if (strcmp((const char *)&StructBuffer[index], "DY") == 0) {
+ 629              		.loc 1 139 49 is_stmt 0 view .LVU163
+ 630 0184 701C     		adds	r0, r6, #1
+ 139:Drivers/Radio/Src/RemoteControl.c ****         } else if (strcmp((const char *)&StructBuffer[index], "DY") == 0) {
+ 631              		.loc 1 139 17 view .LVU164
+ 632 0186 07EB0010 		add	r0, r7, r0, lsl #4
+ 633 018a FFF7FEFF 		bl	atof
+ 634              	.LVL69:
+ 635 018e FFF7FEFF 		bl	__aeabi_d2f
+ 636              	.LVL70:
+ 138:Drivers/Radio/Src/RemoteControl.c ****                 atof((const char *)&StructBuffer[index + 1]);
+ 637              		.loc 1 138 39 view .LVU165
+ 638 0192 C8F82C00 		str	r0, [r8, #44]	@ float
+ 639 0196 49E7     		b	.L24
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\cc9fK6hT.s 			page 17
+
+
+ 640              	.L49:
+ 141:Drivers/Radio/Src/RemoteControl.c ****                 atof((const char *)&StructBuffer[index + 1]);
+ 641              		.loc 1 141 13 is_stmt 1 view .LVU166
+ 142:Drivers/Radio/Src/RemoteControl.c ****         } else if (strcmp((const char *)&StructBuffer[index], "PA") == 0) {
+ 642              		.loc 1 142 49 is_stmt 0 view .LVU167
+ 643 0198 701C     		adds	r0, r6, #1
+ 142:Drivers/Radio/Src/RemoteControl.c ****         } else if (strcmp((const char *)&StructBuffer[index], "PA") == 0) {
+ 644              		.loc 1 142 17 view .LVU168
+ 645 019a 07EB0010 		add	r0, r7, r0, lsl #4
+ 646 019e FFF7FEFF 		bl	atof
+ 647              	.LVL71:
+ 648 01a2 FFF7FEFF 		bl	__aeabi_d2f
+ 649              	.LVL72:
+ 141:Drivers/Radio/Src/RemoteControl.c ****                 atof((const char *)&StructBuffer[index + 1]);
+ 650              		.loc 1 141 39 view .LVU169
+ 651 01a6 C8F83000 		str	r0, [r8, #48]	@ float
+ 652 01aa 3FE7     		b	.L24
+ 653              	.L50:
+ 144:Drivers/Radio/Src/RemoteControl.c ****                 atof((const char *)&StructBuffer[index + 1]);
+ 654              		.loc 1 144 13 is_stmt 1 view .LVU170
+ 145:Drivers/Radio/Src/RemoteControl.c ****         } else if (strcmp((const char *)&StructBuffer[index], "IA") == 0) {
+ 655              		.loc 1 145 49 is_stmt 0 view .LVU171
+ 656 01ac 701C     		adds	r0, r6, #1
+ 145:Drivers/Radio/Src/RemoteControl.c ****         } else if (strcmp((const char *)&StructBuffer[index], "IA") == 0) {
+ 657              		.loc 1 145 17 view .LVU172
+ 658 01ae 07EB0010 		add	r0, r7, r0, lsl #4
+ 659 01b2 FFF7FEFF 		bl	atof
+ 660              	.LVL73:
+ 661 01b6 FFF7FEFF 		bl	__aeabi_d2f
+ 662              	.LVL74:
+ 144:Drivers/Radio/Src/RemoteControl.c ****                 atof((const char *)&StructBuffer[index + 1]);
+ 663              		.loc 1 144 44 view .LVU173
+ 664 01ba C8F83400 		str	r0, [r8, #52]	@ float
+ 665 01be 35E7     		b	.L24
+ 666              	.L51:
+ 147:Drivers/Radio/Src/RemoteControl.c ****                 atof((const char *)&StructBuffer[index + 1]);
+ 667              		.loc 1 147 13 is_stmt 1 view .LVU174
+ 148:Drivers/Radio/Src/RemoteControl.c ****         } else if (strcmp((const char *)&StructBuffer[index], "DA") == 0) {
+ 668              		.loc 1 148 49 is_stmt 0 view .LVU175
+ 669 01c0 701C     		adds	r0, r6, #1
+ 148:Drivers/Radio/Src/RemoteControl.c ****         } else if (strcmp((const char *)&StructBuffer[index], "DA") == 0) {
+ 670              		.loc 1 148 17 view .LVU176
+ 671 01c2 07EB0010 		add	r0, r7, r0, lsl #4
+ 672 01c6 FFF7FEFF 		bl	atof
+ 673              	.LVL75:
+ 674 01ca FFF7FEFF 		bl	__aeabi_d2f
+ 675              	.LVL76:
+ 147:Drivers/Radio/Src/RemoteControl.c ****                 atof((const char *)&StructBuffer[index + 1]);
+ 676              		.loc 1 147 44 view .LVU177
+ 677 01ce C8F83800 		str	r0, [r8, #56]	@ float
+ 678 01d2 2BE7     		b	.L24
+ 679              	.L52:
+ 150:Drivers/Radio/Src/RemoteControl.c ****                 atof((const char *)&StructBuffer[index + 1]);
+ 680              		.loc 1 150 13 is_stmt 1 view .LVU178
+ 151:Drivers/Radio/Src/RemoteControl.c ****         } else if (strcmp((const char *)&StructBuffer[index], "PG") == 0) {
+ 681              		.loc 1 151 49 is_stmt 0 view .LVU179
+ 682 01d4 701C     		adds	r0, r6, #1
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\cc9fK6hT.s 			page 18
+
+
+ 151:Drivers/Radio/Src/RemoteControl.c ****         } else if (strcmp((const char *)&StructBuffer[index], "PG") == 0) {
+ 683              		.loc 1 151 17 view .LVU180
+ 684 01d6 07EB0010 		add	r0, r7, r0, lsl #4
+ 685 01da FFF7FEFF 		bl	atof
+ 686              	.LVL77:
+ 687 01de FFF7FEFF 		bl	__aeabi_d2f
+ 688              	.LVL78:
+ 150:Drivers/Radio/Src/RemoteControl.c ****                 atof((const char *)&StructBuffer[index + 1]);
+ 689              		.loc 1 150 44 view .LVU181
+ 690 01e2 C8F83C00 		str	r0, [r8, #60]	@ float
+ 691 01e6 21E7     		b	.L24
+ 692              	.L53:
+ 153:Drivers/Radio/Src/RemoteControl.c ****                 atof((const char *)&StructBuffer[index + 1]);
+ 693              		.loc 1 153 13 is_stmt 1 view .LVU182
+ 154:Drivers/Radio/Src/RemoteControl.c ****         } else if (strcmp((const char *)&StructBuffer[index], "IG") == 0) {
+ 694              		.loc 1 154 49 is_stmt 0 view .LVU183
+ 695 01e8 701C     		adds	r0, r6, #1
+ 154:Drivers/Radio/Src/RemoteControl.c ****         } else if (strcmp((const char *)&StructBuffer[index], "IG") == 0) {
+ 696              		.loc 1 154 17 view .LVU184
+ 697 01ea 07EB0010 		add	r0, r7, r0, lsl #4
+ 698 01ee FFF7FEFF 		bl	atof
+ 699              	.LVL79:
+ 700 01f2 FFF7FEFF 		bl	__aeabi_d2f
+ 701              	.LVL80:
+ 153:Drivers/Radio/Src/RemoteControl.c ****                 atof((const char *)&StructBuffer[index + 1]);
+ 702              		.loc 1 153 39 view .LVU185
+ 703 01f6 C8F84000 		str	r0, [r8, #64]	@ float
+ 704 01fa 17E7     		b	.L24
+ 705              	.L54:
+ 156:Drivers/Radio/Src/RemoteControl.c ****                 atof((const char *)&StructBuffer[index + 1]);
+ 706              		.loc 1 156 13 is_stmt 1 view .LVU186
+ 157:Drivers/Radio/Src/RemoteControl.c ****         } else if (strcmp((const char *)&StructBuffer[index], "DG") == 0) {
+ 707              		.loc 1 157 49 is_stmt 0 view .LVU187
+ 708 01fc 701C     		adds	r0, r6, #1
+ 157:Drivers/Radio/Src/RemoteControl.c ****         } else if (strcmp((const char *)&StructBuffer[index], "DG") == 0) {
+ 709              		.loc 1 157 17 view .LVU188
+ 710 01fe 07EB0010 		add	r0, r7, r0, lsl #4
+ 711 0202 FFF7FEFF 		bl	atof
+ 712              	.LVL81:
+ 713 0206 FFF7FEFF 		bl	__aeabi_d2f
+ 714              	.LVL82:
+ 156:Drivers/Radio/Src/RemoteControl.c ****                 atof((const char *)&StructBuffer[index + 1]);
+ 715              		.loc 1 156 39 view .LVU189
+ 716 020a C8F84400 		str	r0, [r8, #68]	@ float
+ 717 020e 0DE7     		b	.L24
+ 718              	.LVL83:
+ 719              	.L39:
+ 114:Drivers/Radio/Src/RemoteControl.c ****     while (StructBuffer[index][0] != '\0') {
+ 720              		.loc 1 114 16 view .LVU190
+ 721 0210 0220     		movs	r0, #2
+ 722              	.LVL84:
+ 723              	.L21:
+ 163:Drivers/Radio/Src/RemoteControl.c ****     }
+ 164:Drivers/Radio/Src/RemoteControl.c ****     return CONTROL_OK;
+ 165:Drivers/Radio/Src/RemoteControl.c **** }
+ 724              		.loc 1 165 1 view .LVU191
+ 725 0212 BDE8F081 		pop	{r4, r5, r6, r7, r8, pc}
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\cc9fK6hT.s 			page 19
+
+
+ 726              	.LVL85:
+ 727              	.L56:
+ 728              		.loc 1 165 1 view .LVU192
+ 729 0216 00BF     		.align	2
+ 730              	.L55:
+ 731 0218 00000000 		.word	.LC5
+ 732 021c 04000000 		.word	.LC6
+ 733 0220 08000000 		.word	.LC7
+ 734 0224 0C000000 		.word	.LC8
+ 735 0228 10000000 		.word	.LC9
+ 736 022c 14000000 		.word	.LC10
+ 737 0230 18000000 		.word	.LC11
+ 738 0234 1C000000 		.word	.LC12
+ 739 0238 20000000 		.word	.LC13
+ 740 023c 24000000 		.word	.LC14
+ 741 0240 28000000 		.word	.LC15
+ 742 0244 2C000000 		.word	.LC16
+ 743 0248 30000000 		.word	.LC17
+ 744 024c 34000000 		.word	.LC18
+ 745 0250 38000000 		.word	.LC19
+ 746 0254 3C000000 		.word	.LC20
+ 747              		.cfi_endproc
+ 748              	.LFE74:
+ 750              		.section	.rodata.Decode_Mode.str1.4,"aMS",%progbits,1
+ 751              		.align	2
+ 752              	.LC21:
+ 753 0000 4D4F4400 		.ascii	"MOD\000"
+ 754              		.align	2
+ 755              	.LC22:
+ 756 0004 4D414E55 		.ascii	"MANUAL\000"
+ 756      414C00
+ 757 000b 00       		.align	2
+ 758              	.LC23:
+ 759 000c 414C5449 		.ascii	"ALTITUDE\000"
+ 759      54554445 
+ 759      00
+ 760 0015 000000   		.align	2
+ 761              	.LC24:
+ 762 0018 47505300 		.ascii	"GPS\000"
+ 763              		.align	2
+ 764              	.LC25:
+ 765 001c 484F4D45 		.ascii	"HOME\000"
+ 765      00
+ 766              		.section	.text.Decode_Mode,"ax",%progbits
+ 767              		.align	1
+ 768              		.global	Decode_Mode
+ 769              		.syntax unified
+ 770              		.thumb
+ 771              		.thumb_func
+ 773              	Decode_Mode:
+ 774              	.LVL86:
+ 775              	.LFB75:
+ 166:Drivers/Radio/Src/RemoteControl.c **** 
+ 167:Drivers/Radio/Src/RemoteControl.c **** /**
+ 168:Drivers/Radio/Src/RemoteControl.c ****  * @brief Decode the Mode message.
+ 169:Drivers/Radio/Src/RemoteControl.c ****  * @param Mode The Mode Pointer.
+ 170:Drivers/Radio/Src/RemoteControl.c ****  * @param StructBuffer The Structural Buffer.
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\cc9fK6hT.s 			page 20
+
+
+ 171:Drivers/Radio/Src/RemoteControl.c ****  * @retval ControlStatus_t
+ 172:Drivers/Radio/Src/RemoteControl.c ****  */
+ 173:Drivers/Radio/Src/RemoteControl.c **** ControlStatus_t Decode_Mode(ControlMode_t *Mode,
+ 174:Drivers/Radio/Src/RemoteControl.c ****                             uint8_t (*StructBuffer)[COLUMNS]) {
+ 776              		.loc 1 174 63 is_stmt 1 view -0
+ 777              		.cfi_startproc
+ 778              		@ args = 0, pretend = 0, frame = 0
+ 779              		@ frame_needed = 0, uses_anonymous_args = 0
+ 780              		.loc 1 174 63 is_stmt 0 view .LVU194
+ 781 0000 38B5     		push	{r3, r4, r5, lr}
+ 782              	.LCFI5:
+ 783              		.cfi_def_cfa_offset 16
+ 784              		.cfi_offset 3, -16
+ 785              		.cfi_offset 4, -12
+ 786              		.cfi_offset 5, -8
+ 787              		.cfi_offset 14, -4
+ 788 0002 0546     		mov	r5, r0
+ 789 0004 0C46     		mov	r4, r1
+ 175:Drivers/Radio/Src/RemoteControl.c ****     if (strcmp((const char *)&StructBuffer[0], "MOD") != 0)
+ 790              		.loc 1 175 5 is_stmt 1 view .LVU195
+ 791              		.loc 1 175 9 is_stmt 0 view .LVU196
+ 792 0006 1449     		ldr	r1, .L65
+ 793              	.LVL87:
+ 794              		.loc 1 175 9 view .LVU197
+ 795 0008 2046     		mov	r0, r4
+ 796              	.LVL88:
+ 797              		.loc 1 175 9 view .LVU198
+ 798 000a FFF7FEFF 		bl	strcmp
+ 799              	.LVL89:
+ 800              		.loc 1 175 8 view .LVU199
+ 801 000e F8B9     		cbnz	r0, .L62
+ 176:Drivers/Radio/Src/RemoteControl.c ****         return CONTROL_ERROR;
+ 177:Drivers/Radio/Src/RemoteControl.c ****     if (strcmp((const char *)&StructBuffer[1], "MANUAL") == 0) {
+ 802              		.loc 1 177 5 is_stmt 1 view .LVU200
+ 803              		.loc 1 177 30 is_stmt 0 view .LVU201
+ 804 0010 1034     		adds	r4, r4, #16
+ 805              	.LVL90:
+ 806              		.loc 1 177 9 view .LVU202
+ 807 0012 1249     		ldr	r1, .L65+4
+ 808 0014 2046     		mov	r0, r4
+ 809 0016 FFF7FEFF 		bl	strcmp
+ 810              	.LVL91:
+ 811              		.loc 1 177 8 view .LVU203
+ 812 001a 08B9     		cbnz	r0, .L59
+ 178:Drivers/Radio/Src/RemoteControl.c ****         *Mode = MANUAL_MODE;
+ 813              		.loc 1 178 9 is_stmt 1 view .LVU204
+ 814              		.loc 1 178 15 is_stmt 0 view .LVU205
+ 815 001c 2870     		strb	r0, [r5]
+ 816              	.LVL92:
+ 817              	.L58:
+ 179:Drivers/Radio/Src/RemoteControl.c ****     } else if (strcmp((const char *)&StructBuffer[1], "ALTITUDE") == 0) {
+ 180:Drivers/Radio/Src/RemoteControl.c ****         *Mode = ALTITUDE_HOLD_MODE;
+ 181:Drivers/Radio/Src/RemoteControl.c ****     } else if (strcmp((const char *)&StructBuffer[1], "GPS") == 0) {
+ 182:Drivers/Radio/Src/RemoteControl.c ****         *Mode = GPS_HOLD_MODE;
+ 183:Drivers/Radio/Src/RemoteControl.c ****     } else if (strcmp((const char *)&StructBuffer[1], "HOME") == 0) {
+ 184:Drivers/Radio/Src/RemoteControl.c ****         *Mode = RETURN_HOME_MODE;
+ 185:Drivers/Radio/Src/RemoteControl.c ****     }
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\cc9fK6hT.s 			page 21
+
+
+ 186:Drivers/Radio/Src/RemoteControl.c ****     return CONTROL_OK;
+ 187:Drivers/Radio/Src/RemoteControl.c **** }
+ 818              		.loc 1 187 1 view .LVU206
+ 819 001e 38BD     		pop	{r3, r4, r5, pc}
+ 820              	.LVL93:
+ 821              	.L59:
+ 179:Drivers/Radio/Src/RemoteControl.c ****     } else if (strcmp((const char *)&StructBuffer[1], "ALTITUDE") == 0) {
+ 822              		.loc 1 179 12 is_stmt 1 view .LVU207
+ 179:Drivers/Radio/Src/RemoteControl.c ****     } else if (strcmp((const char *)&StructBuffer[1], "ALTITUDE") == 0) {
+ 823              		.loc 1 179 16 is_stmt 0 view .LVU208
+ 824 0020 0F49     		ldr	r1, .L65+8
+ 825 0022 2046     		mov	r0, r4
+ 826 0024 FFF7FEFF 		bl	strcmp
+ 827              	.LVL94:
+ 179:Drivers/Radio/Src/RemoteControl.c ****     } else if (strcmp((const char *)&StructBuffer[1], "ALTITUDE") == 0) {
+ 828              		.loc 1 179 15 view .LVU209
+ 829 0028 10B9     		cbnz	r0, .L60
+ 180:Drivers/Radio/Src/RemoteControl.c ****     } else if (strcmp((const char *)&StructBuffer[1], "GPS") == 0) {
+ 830              		.loc 1 180 9 is_stmt 1 view .LVU210
+ 180:Drivers/Radio/Src/RemoteControl.c ****     } else if (strcmp((const char *)&StructBuffer[1], "GPS") == 0) {
+ 831              		.loc 1 180 15 is_stmt 0 view .LVU211
+ 832 002a 0123     		movs	r3, #1
+ 833 002c 2B70     		strb	r3, [r5]
+ 834 002e F6E7     		b	.L58
+ 835              	.L60:
+ 181:Drivers/Radio/Src/RemoteControl.c ****         *Mode = GPS_HOLD_MODE;
+ 836              		.loc 1 181 12 is_stmt 1 view .LVU212
+ 181:Drivers/Radio/Src/RemoteControl.c ****         *Mode = GPS_HOLD_MODE;
+ 837              		.loc 1 181 16 is_stmt 0 view .LVU213
+ 838 0030 0C49     		ldr	r1, .L65+12
+ 839 0032 2046     		mov	r0, r4
+ 840 0034 FFF7FEFF 		bl	strcmp
+ 841              	.LVL95:
+ 181:Drivers/Radio/Src/RemoteControl.c ****         *Mode = GPS_HOLD_MODE;
+ 842              		.loc 1 181 15 view .LVU214
+ 843 0038 10B9     		cbnz	r0, .L61
+ 182:Drivers/Radio/Src/RemoteControl.c ****     } else if (strcmp((const char *)&StructBuffer[1], "HOME") == 0) {
+ 844              		.loc 1 182 9 is_stmt 1 view .LVU215
+ 182:Drivers/Radio/Src/RemoteControl.c ****     } else if (strcmp((const char *)&StructBuffer[1], "HOME") == 0) {
+ 845              		.loc 1 182 15 is_stmt 0 view .LVU216
+ 846 003a 0223     		movs	r3, #2
+ 847 003c 2B70     		strb	r3, [r5]
+ 848 003e EEE7     		b	.L58
+ 849              	.L61:
+ 183:Drivers/Radio/Src/RemoteControl.c ****         *Mode = RETURN_HOME_MODE;
+ 850              		.loc 1 183 12 is_stmt 1 view .LVU217
+ 183:Drivers/Radio/Src/RemoteControl.c ****         *Mode = RETURN_HOME_MODE;
+ 851              		.loc 1 183 16 is_stmt 0 view .LVU218
+ 852 0040 0949     		ldr	r1, .L65+16
+ 853 0042 2046     		mov	r0, r4
+ 854 0044 FFF7FEFF 		bl	strcmp
+ 855              	.LVL96:
+ 183:Drivers/Radio/Src/RemoteControl.c ****         *Mode = RETURN_HOME_MODE;
+ 856              		.loc 1 183 15 view .LVU219
+ 857 0048 20B9     		cbnz	r0, .L63
+ 184:Drivers/Radio/Src/RemoteControl.c ****     }
+ 858              		.loc 1 184 9 is_stmt 1 view .LVU220
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\cc9fK6hT.s 			page 22
+
+
+ 184:Drivers/Radio/Src/RemoteControl.c ****     }
+ 859              		.loc 1 184 15 is_stmt 0 view .LVU221
+ 860 004a 0323     		movs	r3, #3
+ 861 004c 2B70     		strb	r3, [r5]
+ 862 004e E6E7     		b	.L58
+ 863              	.LVL97:
+ 864              	.L62:
+ 176:Drivers/Radio/Src/RemoteControl.c ****     if (strcmp((const char *)&StructBuffer[1], "MANUAL") == 0) {
+ 865              		.loc 1 176 16 view .LVU222
+ 866 0050 0220     		movs	r0, #2
+ 867 0052 E4E7     		b	.L58
+ 868              	.LVL98:
+ 869              	.L63:
+ 186:Drivers/Radio/Src/RemoteControl.c **** }
+ 870              		.loc 1 186 12 view .LVU223
+ 871 0054 0020     		movs	r0, #0
+ 872 0056 E2E7     		b	.L58
+ 873              	.L66:
+ 874              		.align	2
+ 875              	.L65:
+ 876 0058 00000000 		.word	.LC21
+ 877 005c 04000000 		.word	.LC22
+ 878 0060 0C000000 		.word	.LC23
+ 879 0064 18000000 		.word	.LC24
+ 880 0068 1C000000 		.word	.LC25
+ 881              		.cfi_endproc
+ 882              	.LFE75:
+ 884              		.section	.text.Control_Init,"ax",%progbits
+ 885              		.align	1
+ 886              		.global	Control_Init
+ 887              		.syntax unified
+ 888              		.thumb
+ 889              		.thumb_func
+ 891              	Control_Init:
+ 892              	.LVL99:
+ 893              	.LFB76:
+ 188:Drivers/Radio/Src/RemoteControl.c **** 
+ 189:Drivers/Radio/Src/RemoteControl.c **** /* Function definations _-----------------------------------------------------*/
+ 190:Drivers/Radio/Src/RemoteControl.c **** /**
+ 191:Drivers/Radio/Src/RemoteControl.c ****  * @brief The Initialize for the Remote Control.
+ 192:Drivers/Radio/Src/RemoteControl.c ****  * @param Handler The pointer of the Control Handler.
+ 193:Drivers/Radio/Src/RemoteControl.c ****  * @param Init The Init struct.
+ 194:Drivers/Radio/Src/RemoteControl.c ****  * @retval void
+ 195:Drivers/Radio/Src/RemoteControl.c ****  */
+ 196:Drivers/Radio/Src/RemoteControl.c **** void Control_Init(ControlHandler_t *Handler, ControlInit_t Init) {
+ 894              		.loc 1 196 66 is_stmt 1 view -0
+ 895              		.cfi_startproc
+ 896              		@ args = 88, pretend = 16, frame = 0
+ 897              		@ frame_needed = 0, uses_anonymous_args = 0
+ 898              		.loc 1 196 66 is_stmt 0 view .LVU225
+ 899 0000 84B0     		sub	sp, sp, #16
+ 900              	.LCFI6:
+ 901              		.cfi_def_cfa_offset 16
+ 902 0002 70B5     		push	{r4, r5, r6, lr}
+ 903              	.LCFI7:
+ 904              		.cfi_def_cfa_offset 32
+ 905              		.cfi_offset 4, -32
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\cc9fK6hT.s 			page 23
+
+
+ 906              		.cfi_offset 5, -28
+ 907              		.cfi_offset 6, -24
+ 908              		.cfi_offset 14, -20
+ 909 0004 0446     		mov	r4, r0
+ 910 0006 05AD     		add	r5, sp, #20
+ 911 0008 85E80E00 		stm	r5, {r1, r2, r3}
+ 197:Drivers/Radio/Src/RemoteControl.c ****     // Copy the user Init struct to the Init struct of the Handler.
+ 198:Drivers/Radio/Src/RemoteControl.c ****     memcpy(&Handler->Init, &Init, sizeof(Init));
+ 912              		.loc 1 198 5 is_stmt 1 view .LVU226
+ 913 000c 5422     		movs	r2, #84
+ 914 000e 2946     		mov	r1, r5
+ 915 0010 FFF7FEFF 		bl	memcpy
+ 916              	.LVL100:
+ 199:Drivers/Radio/Src/RemoteControl.c ****     // Copy the Parameter
+ 200:Drivers/Radio/Src/RemoteControl.c ****     memcpy(&Handler->Mode, &Init.Mode, sizeof(Init.Mode));
+ 917              		.loc 1 200 5 view .LVU227
+ 918 0014 9DF85430 		ldrb	r3, [sp, #84]	@ zero_extendqisi2
+ 919 0018 84F85830 		strb	r3, [r4, #88]
+ 201:Drivers/Radio/Src/RemoteControl.c ****     memcpy(&Handler->Control.ControlPid, &Init.ControlPid,
+ 920              		.loc 1 201 5 view .LVU228
+ 921 001c 05F1040C 		add	ip, r5, #4
+ 922 0020 04F16C0E 		add	lr, r4, #108
+ 923 0024 3435     		adds	r5, r5, #52
+ 924              	.L68:
+ 925 0026 6646     		mov	r6, ip
+ 926 0028 0FCE     		ldmia	r6!, {r0, r1, r2, r3}
+ 927 002a CEF80000 		str	r0, [lr]	@ unaligned
+ 928 002e CEF80410 		str	r1, [lr, #4]	@ unaligned
+ 929 0032 CEF80820 		str	r2, [lr, #8]	@ unaligned
+ 930 0036 CEF80C30 		str	r3, [lr, #12]	@ unaligned
+ 931 003a B446     		mov	ip, r6
+ 932 003c 0EF1100E 		add	lr, lr, #16
+ 933 0040 AE42     		cmp	r6, r5
+ 934 0042 F0D1     		bne	.L68
+ 935 0044 BCE80700 		ldmia	ip!, {r0, r1, r2}
+ 936 0048 CEF80000 		str	r0, [lr]	@ unaligned
+ 937 004c CEF80410 		str	r1, [lr, #4]	@ unaligned
+ 938 0050 CEF80820 		str	r2, [lr, #8]	@ unaligned
+ 202:Drivers/Radio/Src/RemoteControl.c ****            sizeof(Init.ControlPid));
+ 203:Drivers/Radio/Src/RemoteControl.c ****     memcpy(&Handler->Control.JoyStick, &Init.Joystick, sizeof(Init.Joystick));
+ 939              		.loc 1 203 5 view .LVU229
+ 940 0054 16AD     		add	r5, sp, #88
+ 941 0056 0FCD     		ldmia	r5!, {r0, r1, r2, r3}
+ 942 0058 E065     		str	r0, [r4, #92]	@ unaligned
+ 943 005a 2166     		str	r1, [r4, #96]	@ unaligned
+ 944 005c 6266     		str	r2, [r4, #100]	@ unaligned
+ 945 005e A366     		str	r3, [r4, #104]	@ unaligned
+ 204:Drivers/Radio/Src/RemoteControl.c ****     Handler->Serial = Init.Serial;
+ 946              		.loc 1 204 5 view .LVU230
+ 947              		.loc 1 204 27 is_stmt 0 view .LVU231
+ 948 0060 059B     		ldr	r3, [sp, #20]
+ 949              		.loc 1 204 21 view .LVU232
+ 950 0062 6365     		str	r3, [r4, #84]
+ 205:Drivers/Radio/Src/RemoteControl.c ****     // Assign the Handler to the Handler of the file
+ 206:Drivers/Radio/Src/RemoteControl.c ****     ControlHandler = Handler;
+ 951              		.loc 1 206 5 is_stmt 1 view .LVU233
+ 952              		.loc 1 206 20 is_stmt 0 view .LVU234
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\cc9fK6hT.s 			page 24
+
+
+ 953 0064 024B     		ldr	r3, .L70
+ 954 0066 1C60     		str	r4, [r3]
+ 207:Drivers/Radio/Src/RemoteControl.c **** }
+ 955              		.loc 1 207 1 view .LVU235
+ 956 0068 BDE87040 		pop	{r4, r5, r6, lr}
+ 957              	.LCFI8:
+ 958              		.cfi_restore 14
+ 959              		.cfi_restore 6
+ 960              		.cfi_restore 5
+ 961              		.cfi_restore 4
+ 962              		.cfi_def_cfa_offset 16
+ 963              	.LVL101:
+ 964              		.loc 1 207 1 view .LVU236
+ 965 006c 04B0     		add	sp, sp, #16
+ 966              	.LCFI9:
+ 967              		.cfi_def_cfa_offset 0
+ 968 006e 7047     		bx	lr
+ 969              	.L71:
+ 970              		.align	2
+ 971              	.L70:
+ 972 0070 00000000 		.word	.LANCHOR0
+ 973              		.cfi_endproc
+ 974              	.LFE76:
+ 976              		.section	.text.Control_Process,"ax",%progbits
+ 977              		.align	1
+ 978              		.global	Control_Process
+ 979              		.syntax unified
+ 980              		.thumb
+ 981              		.thumb_func
+ 983              	Control_Process:
+ 984              	.LFB77:
+ 208:Drivers/Radio/Src/RemoteControl.c **** 
+ 209:Drivers/Radio/Src/RemoteControl.c **** /**
+ 210:Drivers/Radio/Src/RemoteControl.c ****  * @brief Process the data in the Ring Buffer.
+ 211:Drivers/Radio/Src/RemoteControl.c ****  * @retval ControlStatus_t
+ 212:Drivers/Radio/Src/RemoteControl.c ****  */
+ 213:Drivers/Radio/Src/RemoteControl.c **** ControlStatus_t Control_Process(void) {
+ 985              		.loc 1 213 39 is_stmt 1 view -0
+ 986              		.cfi_startproc
+ 987              		@ args = 0, pretend = 0, frame = 192
+ 988              		@ frame_needed = 0, uses_anonymous_args = 0
+ 989 0000 30B5     		push	{r4, r5, lr}
+ 990              	.LCFI10:
+ 991              		.cfi_def_cfa_offset 12
+ 992              		.cfi_offset 4, -12
+ 993              		.cfi_offset 5, -8
+ 994              		.cfi_offset 14, -4
+ 995 0002 B1B0     		sub	sp, sp, #196
+ 996              	.LCFI11:
+ 997              		.cfi_def_cfa_offset 208
+ 214:Drivers/Radio/Src/RemoteControl.c ****     uint8_t *Buffer;
+ 998              		.loc 1 214 5 view .LVU238
+ 215:Drivers/Radio/Src/RemoteControl.c ****     uint8_t StructBuffer[ROWS][COLUMNS];
+ 999              		.loc 1 215 5 view .LVU239
+ 216:Drivers/Radio/Src/RemoteControl.c ****     ControlStatus_t Status = CONTROL_ERROR;
+ 1000              		.loc 1 216 5 view .LVU240
+ 1001              	.LVL102:
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\cc9fK6hT.s 			page 25
+
+
+ 217:Drivers/Radio/Src/RemoteControl.c ****     if (Detect_Char(ControlHandler->Serial, '\n')) {
+ 1002              		.loc 1 217 5 view .LVU241
+ 1003              		.loc 1 217 35 is_stmt 0 view .LVU242
+ 1004 0004 284B     		ldr	r3, .L85
+ 1005 0006 1B68     		ldr	r3, [r3]
+ 1006              		.loc 1 217 9 view .LVU243
+ 1007 0008 0A21     		movs	r1, #10
+ 1008 000a 586D     		ldr	r0, [r3, #84]
+ 1009 000c FFF7FEFF 		bl	Detect_Char
+ 1010              	.LVL103:
+ 1011              		.loc 1 217 8 view .LVU244
+ 1012 0010 18B9     		cbnz	r0, .L81
+ 216:Drivers/Radio/Src/RemoteControl.c ****     ControlStatus_t Status = CONTROL_ERROR;
+ 1013              		.loc 1 216 21 view .LVU245
+ 1014 0012 0224     		movs	r4, #2
+ 1015              	.LVL104:
+ 1016              	.L73:
+ 218:Drivers/Radio/Src/RemoteControl.c ****         Buffer = malloc(128);
+ 219:Drivers/Radio/Src/RemoteControl.c ****         while (Get_String_NonBlocking(ControlHandler->Serial, Buffer, '\n') >
+ 220:Drivers/Radio/Src/RemoteControl.c ****                0) {
+ 221:Drivers/Radio/Src/RemoteControl.c ****             Control_Parse(StructBuffer, Buffer, ',');
+ 222:Drivers/Radio/Src/RemoteControl.c ****             if (strcmp((const char *)&StructBuffer[0], "CMD") == 0) {
+ 223:Drivers/Radio/Src/RemoteControl.c ****                 Status = Decode_CMD(&ControlHandler->Control, StructBuffer);
+ 224:Drivers/Radio/Src/RemoteControl.c ****             }
+ 225:Drivers/Radio/Src/RemoteControl.c ****             if (strcmp((const char *)&StructBuffer[0], "PID") == 0) {
+ 226:Drivers/Radio/Src/RemoteControl.c ****                 Status = Decode_PID(&ControlHandler->Control, StructBuffer);
+ 227:Drivers/Radio/Src/RemoteControl.c ****             }
+ 228:Drivers/Radio/Src/RemoteControl.c ****             if (strcmp((const char *)&StructBuffer[0], "MOD") == 0) {
+ 229:Drivers/Radio/Src/RemoteControl.c ****                 Status = Decode_Mode(&ControlHandler->Mode, StructBuffer);
+ 230:Drivers/Radio/Src/RemoteControl.c ****             }
+ 231:Drivers/Radio/Src/RemoteControl.c ****             ControlHandler->Status = Status;
+ 232:Drivers/Radio/Src/RemoteControl.c ****         }
+ 233:Drivers/Radio/Src/RemoteControl.c ****         free(Buffer);
+ 234:Drivers/Radio/Src/RemoteControl.c ****     }
+ 235:Drivers/Radio/Src/RemoteControl.c ****     return Status;
+ 1017              		.loc 1 235 5 is_stmt 1 view .LVU246
+ 236:Drivers/Radio/Src/RemoteControl.c **** }
+ 1018              		.loc 1 236 1 is_stmt 0 view .LVU247
+ 1019 0014 2046     		mov	r0, r4
+ 1020 0016 31B0     		add	sp, sp, #196
+ 1021              	.LCFI12:
+ 1022              		.cfi_remember_state
+ 1023              		.cfi_def_cfa_offset 12
+ 1024              		@ sp needed
+ 1025 0018 30BD     		pop	{r4, r5, pc}
+ 1026              	.LVL105:
+ 1027              	.L81:
+ 1028              	.LCFI13:
+ 1029              		.cfi_restore_state
+ 218:Drivers/Radio/Src/RemoteControl.c ****         Buffer = malloc(128);
+ 1030              		.loc 1 218 9 is_stmt 1 view .LVU248
+ 218:Drivers/Radio/Src/RemoteControl.c ****         Buffer = malloc(128);
+ 1031              		.loc 1 218 18 is_stmt 0 view .LVU249
+ 1032 001a 8020     		movs	r0, #128
+ 1033 001c FFF7FEFF 		bl	malloc
+ 1034              	.LVL106:
+ 1035 0020 0546     		mov	r5, r0
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\cc9fK6hT.s 			page 26
+
+
+ 1036              	.LVL107:
+ 219:Drivers/Radio/Src/RemoteControl.c ****                0) {
+ 1037              		.loc 1 219 9 is_stmt 1 view .LVU250
+ 216:Drivers/Radio/Src/RemoteControl.c ****     if (Detect_Char(ControlHandler->Serial, '\n')) {
+ 1038              		.loc 1 216 21 is_stmt 0 view .LVU251
+ 1039 0022 0224     		movs	r4, #2
+ 219:Drivers/Radio/Src/RemoteControl.c ****                0) {
+ 1040              		.loc 1 219 15 view .LVU252
+ 1041 0024 13E0     		b	.L74
+ 1042              	.LVL108:
+ 1043              	.L83:
+ 223:Drivers/Radio/Src/RemoteControl.c ****             }
+ 1044              		.loc 1 223 17 is_stmt 1 view .LVU253
+ 223:Drivers/Radio/Src/RemoteControl.c ****             }
+ 1045              		.loc 1 223 52 is_stmt 0 view .LVU254
+ 1046 0026 204B     		ldr	r3, .L85
+ 1047 0028 1868     		ldr	r0, [r3]
+ 223:Drivers/Radio/Src/RemoteControl.c ****             }
+ 1048              		.loc 1 223 26 view .LVU255
+ 1049 002a 6946     		mov	r1, sp
+ 1050 002c 5C30     		adds	r0, r0, #92
+ 1051 002e FFF7FEFF 		bl	Decode_CMD
+ 1052              	.LVL109:
+ 1053 0032 0446     		mov	r4, r0
+ 1054              	.LVL110:
+ 223:Drivers/Radio/Src/RemoteControl.c ****             }
+ 1055              		.loc 1 223 26 view .LVU256
+ 1056 0034 1FE0     		b	.L75
+ 1057              	.L84:
+ 226:Drivers/Radio/Src/RemoteControl.c ****             }
+ 1058              		.loc 1 226 17 is_stmt 1 view .LVU257
+ 226:Drivers/Radio/Src/RemoteControl.c ****             }
+ 1059              		.loc 1 226 52 is_stmt 0 view .LVU258
+ 1060 0036 1C4B     		ldr	r3, .L85
+ 1061 0038 1868     		ldr	r0, [r3]
+ 226:Drivers/Radio/Src/RemoteControl.c ****             }
+ 1062              		.loc 1 226 26 view .LVU259
+ 1063 003a 6946     		mov	r1, sp
+ 1064 003c 5C30     		adds	r0, r0, #92
+ 1065 003e FFF7FEFF 		bl	Decode_PID
+ 1066              	.LVL111:
+ 1067 0042 0446     		mov	r4, r0
+ 1068              	.LVL112:
+ 226:Drivers/Radio/Src/RemoteControl.c ****             }
+ 1069              		.loc 1 226 26 view .LVU260
+ 1070 0044 1DE0     		b	.L76
+ 1071              	.L77:
+ 231:Drivers/Radio/Src/RemoteControl.c ****         }
+ 1072              		.loc 1 231 13 is_stmt 1 view .LVU261
+ 231:Drivers/Radio/Src/RemoteControl.c ****         }
+ 1073              		.loc 1 231 27 is_stmt 0 view .LVU262
+ 1074 0046 184B     		ldr	r3, .L85
+ 1075 0048 1B68     		ldr	r3, [r3]
+ 231:Drivers/Radio/Src/RemoteControl.c ****         }
+ 1076              		.loc 1 231 36 view .LVU263
+ 1077 004a 83F8A840 		strb	r4, [r3, #168]
+ 1078              	.LVL113:
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\cc9fK6hT.s 			page 27
+
+
+ 1079              	.L74:
+ 219:Drivers/Radio/Src/RemoteControl.c ****                0) {
+ 1080              		.loc 1 219 15 is_stmt 1 view .LVU264
+ 219:Drivers/Radio/Src/RemoteControl.c ****                0) {
+ 1081              		.loc 1 219 53 is_stmt 0 view .LVU265
+ 1082 004e 164B     		ldr	r3, .L85
+ 1083 0050 1B68     		ldr	r3, [r3]
+ 219:Drivers/Radio/Src/RemoteControl.c ****                0) {
+ 1084              		.loc 1 219 16 view .LVU266
+ 1085 0052 0A22     		movs	r2, #10
+ 1086 0054 2946     		mov	r1, r5
+ 1087 0056 586D     		ldr	r0, [r3, #84]
+ 1088 0058 FFF7FEFF 		bl	Get_String_NonBlocking
+ 1089              	.LVL114:
+ 219:Drivers/Radio/Src/RemoteControl.c ****                0) {
+ 1090              		.loc 1 219 15 view .LVU267
+ 1091 005c 0028     		cmp	r0, #0
+ 1092 005e 1EDD     		ble	.L82
+ 221:Drivers/Radio/Src/RemoteControl.c ****             if (strcmp((const char *)&StructBuffer[0], "CMD") == 0) {
+ 1093              		.loc 1 221 13 is_stmt 1 view .LVU268
+ 1094 0060 2C22     		movs	r2, #44
+ 1095 0062 2946     		mov	r1, r5
+ 1096 0064 6846     		mov	r0, sp
+ 1097 0066 FFF7FEFF 		bl	Control_Parse
+ 1098              	.LVL115:
+ 222:Drivers/Radio/Src/RemoteControl.c ****                 Status = Decode_CMD(&ControlHandler->Control, StructBuffer);
+ 1099              		.loc 1 222 13 view .LVU269
+ 222:Drivers/Radio/Src/RemoteControl.c ****                 Status = Decode_CMD(&ControlHandler->Control, StructBuffer);
+ 1100              		.loc 1 222 17 is_stmt 0 view .LVU270
+ 1101 006a 1049     		ldr	r1, .L85+4
+ 1102 006c 6846     		mov	r0, sp
+ 1103 006e FFF7FEFF 		bl	strcmp
+ 1104              	.LVL116:
+ 222:Drivers/Radio/Src/RemoteControl.c ****                 Status = Decode_CMD(&ControlHandler->Control, StructBuffer);
+ 1105              		.loc 1 222 16 view .LVU271
+ 1106 0072 0028     		cmp	r0, #0
+ 1107 0074 D7D0     		beq	.L83
+ 1108              	.L75:
+ 225:Drivers/Radio/Src/RemoteControl.c ****                 Status = Decode_PID(&ControlHandler->Control, StructBuffer);
+ 1109              		.loc 1 225 13 is_stmt 1 view .LVU272
+ 225:Drivers/Radio/Src/RemoteControl.c ****                 Status = Decode_PID(&ControlHandler->Control, StructBuffer);
+ 1110              		.loc 1 225 17 is_stmt 0 view .LVU273
+ 1111 0076 0E49     		ldr	r1, .L85+8
+ 1112 0078 6846     		mov	r0, sp
+ 1113 007a FFF7FEFF 		bl	strcmp
+ 1114              	.LVL117:
+ 225:Drivers/Radio/Src/RemoteControl.c ****                 Status = Decode_PID(&ControlHandler->Control, StructBuffer);
+ 1115              		.loc 1 225 16 view .LVU274
+ 1116 007e 0028     		cmp	r0, #0
+ 1117 0080 D9D0     		beq	.L84
+ 1118              	.L76:
+ 228:Drivers/Radio/Src/RemoteControl.c ****                 Status = Decode_Mode(&ControlHandler->Mode, StructBuffer);
+ 1119              		.loc 1 228 13 is_stmt 1 view .LVU275
+ 228:Drivers/Radio/Src/RemoteControl.c ****                 Status = Decode_Mode(&ControlHandler->Mode, StructBuffer);
+ 1120              		.loc 1 228 17 is_stmt 0 view .LVU276
+ 1121 0082 0C49     		ldr	r1, .L85+12
+ 1122 0084 6846     		mov	r0, sp
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\cc9fK6hT.s 			page 28
+
+
+ 1123 0086 FFF7FEFF 		bl	strcmp
+ 1124              	.LVL118:
+ 228:Drivers/Radio/Src/RemoteControl.c ****                 Status = Decode_Mode(&ControlHandler->Mode, StructBuffer);
+ 1125              		.loc 1 228 16 view .LVU277
+ 1126 008a 0028     		cmp	r0, #0
+ 1127 008c DBD1     		bne	.L77
+ 229:Drivers/Radio/Src/RemoteControl.c ****             }
+ 1128              		.loc 1 229 17 is_stmt 1 view .LVU278
+ 229:Drivers/Radio/Src/RemoteControl.c ****             }
+ 1129              		.loc 1 229 53 is_stmt 0 view .LVU279
+ 1130 008e 064B     		ldr	r3, .L85
+ 1131 0090 1868     		ldr	r0, [r3]
+ 229:Drivers/Radio/Src/RemoteControl.c ****             }
+ 1132              		.loc 1 229 26 view .LVU280
+ 1133 0092 6946     		mov	r1, sp
+ 1134 0094 5830     		adds	r0, r0, #88
+ 1135 0096 FFF7FEFF 		bl	Decode_Mode
+ 1136              	.LVL119:
+ 1137 009a 0446     		mov	r4, r0
+ 1138              	.LVL120:
+ 229:Drivers/Radio/Src/RemoteControl.c ****             }
+ 1139              		.loc 1 229 26 view .LVU281
+ 1140 009c D3E7     		b	.L77
+ 1141              	.L82:
+ 233:Drivers/Radio/Src/RemoteControl.c ****     }
+ 1142              		.loc 1 233 9 is_stmt 1 view .LVU282
+ 1143 009e 2846     		mov	r0, r5
+ 1144 00a0 FFF7FEFF 		bl	free
+ 1145              	.LVL121:
+ 1146 00a4 B6E7     		b	.L73
+ 1147              	.L86:
+ 1148 00a6 00BF     		.align	2
+ 1149              	.L85:
+ 1150 00a8 00000000 		.word	.LANCHOR0
+ 1151 00ac 00000000 		.word	.LC0
+ 1152 00b0 00000000 		.word	.LC5
+ 1153 00b4 00000000 		.word	.LC21
+ 1154              		.cfi_endproc
+ 1155              	.LFE77:
+ 1157              		.global	ControlHandler
+ 1158              		.section	.bss.ControlHandler,"aw",%nobits
+ 1159              		.align	2
+ 1160              		.set	.LANCHOR0,. + 0
+ 1163              	ControlHandler:
+ 1164 0000 00000000 		.space	4
+ 1165              		.text
+ 1166              	.Letext0:
+ 1167              		.file 2 "c:\\program files (x86)\\gnu arm embedded toolchain\\10 2021.10\\arm-none-eabi\\include\\
+ 1168              		.file 3 "c:\\program files (x86)\\gnu arm embedded toolchain\\10 2021.10\\arm-none-eabi\\include\\
+ 1169              		.file 4 "Drivers/CMSIS/Device/ST/STM32F2xx/Include/stm32f205xx.h"
+ 1170              		.file 5 "Drivers/STM32F2xx_HAL_Driver/Inc/stm32f2xx_hal_def.h"
+ 1171              		.file 6 "Drivers/STM32F2xx_HAL_Driver/Inc/stm32f2xx_hal_dma.h"
+ 1172              		.file 7 "Drivers/STM32F2xx_HAL_Driver/Inc/stm32f2xx_hal_uart.h"
+ 1173              		.file 8 "Drivers/RingBuffer/Inc/uartRingBufDMA.h"
+ 1174              		.file 9 "Drivers/Radio/Inc/RemoteControl.h"
+ 1175              		.file 10 "c:\\program files (x86)\\gnu arm embedded toolchain\\10 2021.10\\arm-none-eabi\\include\
+ 1176              		.file 11 "c:\\program files (x86)\\gnu arm embedded toolchain\\10 2021.10\\arm-none-eabi\\include\
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\cc9fK6hT.s 			page 29
+
+
+ 1177              		.file 12 "<built-in>"
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\cc9fK6hT.s 			page 30
+
+
+DEFINED SYMBOLS
+                            *ABS*:00000000 RemoteControl.c
+C:\Users\sangt\AppData\Local\Temp\cc9fK6hT.s:18     .text.Control_Parse:00000000 $t
+C:\Users\sangt\AppData\Local\Temp\cc9fK6hT.s:24     .text.Control_Parse:00000000 Control_Parse
+C:\Users\sangt\AppData\Local\Temp\cc9fK6hT.s:107    .rodata.Decode_CMD.str1.4:00000000 $d
+C:\Users\sangt\AppData\Local\Temp\cc9fK6hT.s:123    .text.Decode_CMD:00000000 $t
+C:\Users\sangt\AppData\Local\Temp\cc9fK6hT.s:129    .text.Decode_CMD:00000000 Decode_CMD
+C:\Users\sangt\AppData\Local\Temp\cc9fK6hT.s:271    .text.Decode_CMD:00000098 $d
+C:\Users\sangt\AppData\Local\Temp\cc9fK6hT.s:280    .rodata.Decode_PID.str1.4:00000000 $d
+C:\Users\sangt\AppData\Local\Temp\cc9fK6hT.s:330    .text.Decode_PID:00000000 $t
+C:\Users\sangt\AppData\Local\Temp\cc9fK6hT.s:336    .text.Decode_PID:00000000 Decode_PID
+C:\Users\sangt\AppData\Local\Temp\cc9fK6hT.s:731    .text.Decode_PID:00000218 $d
+C:\Users\sangt\AppData\Local\Temp\cc9fK6hT.s:751    .rodata.Decode_Mode.str1.4:00000000 $d
+C:\Users\sangt\AppData\Local\Temp\cc9fK6hT.s:767    .text.Decode_Mode:00000000 $t
+C:\Users\sangt\AppData\Local\Temp\cc9fK6hT.s:773    .text.Decode_Mode:00000000 Decode_Mode
+C:\Users\sangt\AppData\Local\Temp\cc9fK6hT.s:876    .text.Decode_Mode:00000058 $d
+C:\Users\sangt\AppData\Local\Temp\cc9fK6hT.s:885    .text.Control_Init:00000000 $t
+C:\Users\sangt\AppData\Local\Temp\cc9fK6hT.s:891    .text.Control_Init:00000000 Control_Init
+C:\Users\sangt\AppData\Local\Temp\cc9fK6hT.s:972    .text.Control_Init:00000070 $d
+C:\Users\sangt\AppData\Local\Temp\cc9fK6hT.s:977    .text.Control_Process:00000000 $t
+C:\Users\sangt\AppData\Local\Temp\cc9fK6hT.s:983    .text.Control_Process:00000000 Control_Process
+C:\Users\sangt\AppData\Local\Temp\cc9fK6hT.s:1150   .text.Control_Process:000000a8 $d
+C:\Users\sangt\AppData\Local\Temp\cc9fK6hT.s:1163   .bss.ControlHandler:00000000 ControlHandler
+C:\Users\sangt\AppData\Local\Temp\cc9fK6hT.s:1159   .bss.ControlHandler:00000000 $d
+
+UNDEFINED SYMBOLS
+strtok
+strcpy
+free
+strcmp
+atoi
+__aeabi_d2f
+atof
+memcpy
+Detect_Char
+malloc
+Get_String_NonBlocking

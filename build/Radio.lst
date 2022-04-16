@@ -1,0 +1,3597 @@
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s 			page 1
+
+
+   1              		.cpu cortex-m3
+   2              		.arch armv7-m
+   3              		.fpu softvfp
+   4              		.eabi_attribute 20, 1
+   5              		.eabi_attribute 21, 1
+   6              		.eabi_attribute 23, 3
+   7              		.eabi_attribute 24, 1
+   8              		.eabi_attribute 25, 1
+   9              		.eabi_attribute 26, 1
+  10              		.eabi_attribute 30, 1
+  11              		.eabi_attribute 34, 1
+  12              		.eabi_attribute 18, 4
+  13              		.file	"Radio.c"
+  14              		.text
+  15              	.Ltext0:
+  16              		.cfi_sections	.debug_frame
+  17              		.section	.text.Radio_Init,"ax",%progbits
+  18              		.align	1
+  19              		.global	Radio_Init
+  20              		.syntax unified
+  21              		.thumb
+  22              		.thumb_func
+  24              	Radio_Init:
+  25              	.LVL0:
+  26              	.LFB75:
+  27              		.file 1 "Drivers/Radio/Src/Radio.c"
+   1:Drivers/Radio/Src/Radio.c **** /* USER CODE BEGIN Header */
+   2:Drivers/Radio/Src/Radio.c **** /**
+   3:Drivers/Radio/Src/Radio.c ****  ******************************************************************************
+   4:Drivers/Radio/Src/Radio.c ****  * @file           : Radio.c
+   5:Drivers/Radio/Src/Radio.c ****  * @brief          : Main program body
+   6:Drivers/Radio/Src/Radio.c ****  ******************************************************************************
+   7:Drivers/Radio/Src/Radio.c ****  * @attention
+   8:Drivers/Radio/Src/Radio.c ****  *
+   9:Drivers/Radio/Src/Radio.c ****  * <h2><center>&copy; Copyright (c) 2022 Sang Tan Truong.
+  10:Drivers/Radio/Src/Radio.c ****  * All rights reserved.</center></h2>
+  11:Drivers/Radio/Src/Radio.c ****  *
+  12:Drivers/Radio/Src/Radio.c ****  * This software component is licensed by ST under BSD 3-Clause license,
+  13:Drivers/Radio/Src/Radio.c ****  * the "License"; You may not use this file except in compliance with the
+  14:Drivers/Radio/Src/Radio.c ****  * License. You may obtain a copy of the License at:
+  15:Drivers/Radio/Src/Radio.c ****  *                        opensource.org/licenses/BSD-3-Clause
+  16:Drivers/Radio/Src/Radio.c ****  *
+  17:Drivers/Radio/Src/Radio.c ****  ******************************************************************************
+  18:Drivers/Radio/Src/Radio.c ****  */
+  19:Drivers/Radio/Src/Radio.c **** /* USER CODE END Header */
+  20:Drivers/Radio/Src/Radio.c **** /* Includes ------------------------------------------------------------------*/
+  21:Drivers/Radio/Src/Radio.c **** #include "Radio.h"
+  22:Drivers/Radio/Src/Radio.c **** /* Private includes ----------------------------------------------------------*/
+  23:Drivers/Radio/Src/Radio.c **** #include <stdlib.h>
+  24:Drivers/Radio/Src/Radio.c **** #include <string.h>
+  25:Drivers/Radio/Src/Radio.c **** 
+  26:Drivers/Radio/Src/Radio.c **** #include "RemoteControl.h"
+  27:Drivers/Radio/Src/Radio.c **** 
+  28:Drivers/Radio/Src/Radio.c **** /* Private typedef -----------------------------------------------------------*/
+  29:Drivers/Radio/Src/Radio.c **** 
+  30:Drivers/Radio/Src/Radio.c **** /* Private define ------------------------------------------------------------*/
+  31:Drivers/Radio/Src/Radio.c **** #define MIN(x, y) (((x) < (y)) ? (x) : (y))
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s 			page 2
+
+
+  32:Drivers/Radio/Src/Radio.c **** 
+  33:Drivers/Radio/Src/Radio.c **** #define RADIO_MAX_CMD_LENGTH 256
+  34:Drivers/Radio/Src/Radio.c **** #define ROWS 32
+  35:Drivers/Radio/Src/Radio.c **** #define COLUMNS 32
+  36:Drivers/Radio/Src/Radio.c **** 
+  37:Drivers/Radio/Src/Radio.c **** /* Private macro -------------------------------------------------------------*/
+  38:Drivers/Radio/Src/Radio.c **** 
+  39:Drivers/Radio/Src/Radio.c **** /* Private variables ---------------------------------------------------------*/
+  40:Drivers/Radio/Src/Radio.c **** RadioHandler_t *RadioHandler;
+  41:Drivers/Radio/Src/Radio.c **** 
+  42:Drivers/Radio/Src/Radio.c **** uint64_t TxpipeAddrs = 0x11223344AA;
+  43:Drivers/Radio/Src/Radio.c **** 
+  44:Drivers/Radio/Src/Radio.c **** /* Private function prototypes -----------------------------------------------*/
+  45:Drivers/Radio/Src/Radio.c **** void Radio_Process_From_FC(uint8_t *Buffer);
+  46:Drivers/Radio/Src/Radio.c **** int Radio_Control_Parse(uint8_t (*TempBuffer)[COLUMNS], uint8_t *Source,
+  47:Drivers/Radio/Src/Radio.c ****                         const char Deli);
+  48:Drivers/Radio/Src/Radio.c **** void Radio_Decode_CMD(uint8_t (*Struct)[COLUMNS]);
+  49:Drivers/Radio/Src/Radio.c **** void Radio_Decode_PID(uint8_t (*StructBuffer)[COLUMNS]);
+  50:Drivers/Radio/Src/Radio.c **** void Radio_Decode_Ack(uint8_t (*StructBuffer)[COLUMNS]);
+  51:Drivers/Radio/Src/Radio.c **** void Radio_Decode_Mode(uint8_t (*StructBuffer)[COLUMNS]);
+  52:Drivers/Radio/Src/Radio.c **** // Function for Circular buffer.
+  53:Drivers/Radio/Src/Radio.c **** void Radio_Increase_Pointer(int *Pointer, uint16_t NumbersBytes);
+  54:Drivers/Radio/Src/Radio.c **** /* Function definations ------------------------------------------------------*/
+  55:Drivers/Radio/Src/Radio.c **** /**
+  56:Drivers/Radio/Src/Radio.c ****  * @brief Init the Radio task.
+  57:Drivers/Radio/Src/Radio.c ****  * @param Handle The pointer of the handler.
+  58:Drivers/Radio/Src/Radio.c ****  * @param Init The init of the radio.
+  59:Drivers/Radio/Src/Radio.c ****  * @param void
+  60:Drivers/Radio/Src/Radio.c ****  */
+  61:Drivers/Radio/Src/Radio.c **** void Radio_Init(RadioHandler_t *Handle, RadioInit_t Init) {
+  28              		.loc 1 61 59 view -0
+  29              		.cfi_startproc
+  30              		@ args = 48, pretend = 16, frame = 0
+  31              		@ frame_needed = 0, uses_anonymous_args = 0
+  32              		.loc 1 61 59 is_stmt 0 view .LVU1
+  33 0000 84B0     		sub	sp, sp, #16
+  34              	.LCFI0:
+  35              		.cfi_def_cfa_offset 16
+  36 0002 10B5     		push	{r4, lr}
+  37              	.LCFI1:
+  38              		.cfi_def_cfa_offset 24
+  39              		.cfi_offset 4, -24
+  40              		.cfi_offset 14, -20
+  41 0004 8EB0     		sub	sp, sp, #56
+  42              	.LCFI2:
+  43              		.cfi_def_cfa_offset 80
+  44 0006 0DF1440E 		add	lr, sp, #68
+  45 000a 8EE80E00 		stm	lr, {r1, r2, r3}
+  62:Drivers/Radio/Src/Radio.c ****     RadioHandler = Handle;
+  46              		.loc 1 62 5 is_stmt 1 view .LVU2
+  47              		.loc 1 62 18 is_stmt 0 view .LVU3
+  48 000e 304C     		ldr	r4, .L3
+  49 0010 2060     		str	r0, [r4]
+  63:Drivers/Radio/Src/Radio.c ****     RadioHandler->Init = Init;
+  50              		.loc 1 63 5 is_stmt 1 view .LVU4
+  51              		.loc 1 63 24 is_stmt 0 view .LVU5
+  52 0012 8446     		mov	ip, r0
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s 			page 3
+
+
+  53 0014 BEE80F00 		ldmia	lr!, {r0, r1, r2, r3}
+  54              	.LVL1:
+  55              		.loc 1 63 24 view .LVU6
+  56 0018 ACE80F00 		stmia	ip!, {r0, r1, r2, r3}
+  57              	.LVL2:
+  58              		.loc 1 63 24 view .LVU7
+  59 001c BEE80F00 		ldmia	lr!, {r0, r1, r2, r3}
+  60 0020 ACE80F00 		stmia	ip!, {r0, r1, r2, r3}
+  61              	.LVL3:
+  62              		.loc 1 63 24 view .LVU8
+  63 0024 9EE80700 		ldm	lr, {r0, r1, r2}
+  64 0028 8CE80700 		stm	ip, {r0, r1, r2}
+  64:Drivers/Radio/Src/Radio.c ****     RadioHandler->enableDebug = Init.enableDebug;
+  65              		.loc 1 64 5 is_stmt 1 view .LVU9
+  66              		.loc 1 64 17 is_stmt 0 view .LVU10
+  67 002c 2368     		ldr	r3, [r4]
+  68              		.loc 1 64 37 view .LVU11
+  69 002e 9DF86020 		ldrb	r2, [sp, #96]	@ zero_extendqisi2
+  70              		.loc 1 64 31 view .LVU12
+  71 0032 83F83820 		strb	r2, [r3, #56]
+  65:Drivers/Radio/Src/Radio.c ****     RadioHandler->Serial = Init.Serial;
+  72              		.loc 1 65 5 is_stmt 1 view .LVU13
+  73              		.loc 1 65 32 is_stmt 0 view .LVU14
+  74 0036 179A     		ldr	r2, [sp, #92]
+  75              		.loc 1 65 26 view .LVU15
+  76 0038 1A63     		str	r2, [r3, #48]
+  66:Drivers/Radio/Src/Radio.c ****     RadioHandler->Debug = Init.Debug;
+  77              		.loc 1 66 5 is_stmt 1 view .LVU16
+  78              		.loc 1 66 31 is_stmt 0 view .LVU17
+  79 003a 0446     		mov	r4, r0
+  80              		.loc 1 66 25 view .LVU18
+  81 003c 5863     		str	r0, [r3, #52]
+  67:Drivers/Radio/Src/Radio.c ****     RadioHandler->Display = Init.Display;
+  82              		.loc 1 67 5 is_stmt 1 view .LVU19
+  83              		.loc 1 67 27 is_stmt 0 view .LVU20
+  84 003e D963     		str	r1, [r3, #60]
+  68:Drivers/Radio/Src/Radio.c ****     RadioHandler->ADCValue = Init.ADCValue;
+  85              		.loc 1 68 5 is_stmt 1 view .LVU21
+  86              		.loc 1 68 34 is_stmt 0 view .LVU22
+  87 0040 1B9A     		ldr	r2, [sp, #108]
+  88              		.loc 1 68 28 view .LVU23
+  89 0042 1A65     		str	r2, [r3, #80]
+  69:Drivers/Radio/Src/Radio.c ****     NRF24_begin(RadioHandler->Init.nrfInit);
+  90              		.loc 1 69 5 is_stmt 1 view .LVU24
+  91 0044 03F11002 		add	r2, r3, #16
+  92 0048 92E80300 		ldm	r2, {r0, r1}
+  93 004c 8DE80300 		stm	sp, {r0, r1}
+  94 0050 0FCB     		ldm	r3, {r0, r1, r2, r3}
+  95 0052 FFF7FEFF 		bl	NRF24_begin
+  96              	.LVL4:
+  70:Drivers/Radio/Src/Radio.c ****     nrf24_DebugUART_Init(*Init.Debug->huart);
+  97              		.loc 1 70 5 view .LVU25
+  98              		.loc 1 70 37 is_stmt 0 view .LVU26
+  99 0056 6468     		ldr	r4, [r4, #4]
+ 100              		.loc 1 70 5 view .LVU27
+ 101 0058 EC46     		mov	ip, sp
+ 102 005a 04F1100E 		add	lr, r4, #16
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s 			page 4
+
+
+ 103 005e BEE80F00 		ldmia	lr!, {r0, r1, r2, r3}
+ 104 0062 ACE80F00 		stmia	ip!, {r0, r1, r2, r3}
+ 105 0066 BEE80F00 		ldmia	lr!, {r0, r1, r2, r3}
+ 106 006a ACE80F00 		stmia	ip!, {r0, r1, r2, r3}
+ 107 006e BEE80F00 		ldmia	lr!, {r0, r1, r2, r3}
+ 108 0072 ACE80F00 		stmia	ip!, {r0, r1, r2, r3}
+ 109 0076 DEF80030 		ldr	r3, [lr]
+ 110 007a CCF80030 		str	r3, [ip]
+ 111 007e 94E80F00 		ldm	r4, {r0, r1, r2, r3}
+ 112 0082 FFF7FEFF 		bl	nrf24_DebugUART_Init
+ 113              	.LVL5:
+  71:Drivers/Radio/Src/Radio.c ****     NRF24_stopListening();
+ 114              		.loc 1 71 5 is_stmt 1 view .LVU28
+ 115 0086 FFF7FEFF 		bl	NRF24_stopListening
+ 116              	.LVL6:
+  72:Drivers/Radio/Src/Radio.c ****     NRF24_openWritingPipe(TxpipeAddrs);
+ 117              		.loc 1 72 5 view .LVU29
+ 118 008a 124B     		ldr	r3, .L3+4
+ 119 008c D3E90001 		ldrd	r0, [r3]
+ 120 0090 FFF7FEFF 		bl	NRF24_openWritingPipe
+ 121              	.LVL7:
+  73:Drivers/Radio/Src/Radio.c ****     NRF24_setChannel(12);
+ 122              		.loc 1 73 5 view .LVU30
+ 123 0094 0C20     		movs	r0, #12
+ 124 0096 FFF7FEFF 		bl	NRF24_setChannel
+ 125              	.LVL8:
+  74:Drivers/Radio/Src/Radio.c ****     NRF24_setAutoAck(true);
+ 126              		.loc 1 74 5 view .LVU31
+ 127 009a 0120     		movs	r0, #1
+ 128 009c FFF7FEFF 		bl	NRF24_setAutoAck
+ 129              	.LVL9:
+  75:Drivers/Radio/Src/Radio.c ****     NRF24_setPayloadSize(32);
+ 130              		.loc 1 75 5 view .LVU32
+ 131 00a0 2020     		movs	r0, #32
+ 132 00a2 FFF7FEFF 		bl	NRF24_setPayloadSize
+ 133              	.LVL10:
+  76:Drivers/Radio/Src/Radio.c ****     NRF24_setPALevel(RF24_PA_m18dB);
+ 134              		.loc 1 76 5 view .LVU33
+ 135 00a6 0020     		movs	r0, #0
+ 136 00a8 FFF7FEFF 		bl	NRF24_setPALevel
+ 137              	.LVL11:
+  77:Drivers/Radio/Src/Radio.c ****     NRF24_setDataRate(RF24_2MBPS);
+ 138              		.loc 1 77 5 view .LVU34
+ 139 00ac 0120     		movs	r0, #1
+ 140 00ae FFF7FEFF 		bl	NRF24_setDataRate
+ 141              	.LVL12:
+  78:Drivers/Radio/Src/Radio.c ****     NRF24_setRetries(0x07, 15);  // Delay 1250us and 15 times
+ 142              		.loc 1 78 5 view .LVU35
+ 143 00b2 0F21     		movs	r1, #15
+ 144 00b4 0720     		movs	r0, #7
+ 145 00b6 FFF7FEFF 		bl	NRF24_setRetries
+ 146              	.LVL13:
+  79:Drivers/Radio/Src/Radio.c ****     NRF24_enableAckPayload();
+ 147              		.loc 1 79 5 view .LVU36
+ 148 00ba FFF7FEFF 		bl	NRF24_enableAckPayload
+ 149              	.LVL14:
+  80:Drivers/Radio/Src/Radio.c ****     NRF24_enableDynamicPayloads();
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s 			page 5
+
+
+ 150              		.loc 1 80 5 view .LVU37
+ 151 00be FFF7FEFF 		bl	NRF24_enableDynamicPayloads
+ 152              	.LVL15:
+  81:Drivers/Radio/Src/Radio.c ****     printRadioSettings();
+ 153              		.loc 1 81 5 view .LVU38
+ 154 00c2 FFF7FEFF 		bl	printRadioSettings
+ 155              	.LVL16:
+  82:Drivers/Radio/Src/Radio.c **** }
+ 156              		.loc 1 82 1 is_stmt 0 view .LVU39
+ 157 00c6 0EB0     		add	sp, sp, #56
+ 158              	.LCFI3:
+ 159              		.cfi_def_cfa_offset 24
+ 160              		@ sp needed
+ 161 00c8 BDE81040 		pop	{r4, lr}
+ 162              	.LCFI4:
+ 163              		.cfi_restore 14
+ 164              		.cfi_restore 4
+ 165              		.cfi_def_cfa_offset 16
+ 166 00cc 04B0     		add	sp, sp, #16
+ 167              	.LCFI5:
+ 168              		.cfi_def_cfa_offset 0
+ 169 00ce 7047     		bx	lr
+ 170              	.L4:
+ 171              		.align	2
+ 172              	.L3:
+ 173 00d0 00000000 		.word	.LANCHOR0
+ 174 00d4 00000000 		.word	.LANCHOR1
+ 175              		.cfi_endproc
+ 176              	.LFE75:
+ 178              		.section	.text.Radio_Control_Parse,"ax",%progbits
+ 179              		.align	1
+ 180              		.global	Radio_Control_Parse
+ 181              		.syntax unified
+ 182              		.thumb
+ 183              		.thumb_func
+ 185              	Radio_Control_Parse:
+ 186              	.LVL17:
+ 187              	.LFB78:
+  83:Drivers/Radio/Src/Radio.c **** 
+  84:Drivers/Radio/Src/Radio.c **** /**
+  85:Drivers/Radio/Src/Radio.c ****  * @brief Process the Radio task. Called periodic.
+  86:Drivers/Radio/Src/Radio.c ****  * @retval RadioStatus_t
+  87:Drivers/Radio/Src/Radio.c ****  */
+  88:Drivers/Radio/Src/Radio.c **** RadioStatus_t Radio_Process() {
+  89:Drivers/Radio/Src/Radio.c ****     static uint8_t DataFromFC[RADIO_MAX_CMD_LENGTH];
+  90:Drivers/Radio/Src/Radio.c ****     uint8_t *Buffer;
+  91:Drivers/Radio/Src/Radio.c ****     Buffer = malloc(33);
+  92:Drivers/Radio/Src/Radio.c ****     memset(Buffer, '\0', 33);
+  93:Drivers/Radio/Src/Radio.c ****     // Process the Adc value
+  94:Drivers/Radio/Src/Radio.c ****     Calculate_PWM(&RadioHandler->PWMValue, RadioHandler->ADCValue,
+  95:Drivers/Radio/Src/Radio.c ****                   &RadioHandler->AdcOffset);
+  96:Drivers/Radio/Src/Radio.c ****     // Check the data in the circular buffer.
+  97:Drivers/Radio/Src/Radio.c ****     int Available = Radio_Get_String(Buffer, 32);
+  98:Drivers/Radio/Src/Radio.c ****     if (Available > 0) {
+  99:Drivers/Radio/Src/Radio.c ****         if (NRF24_write(Buffer, Available)) {
+ 100:Drivers/Radio/Src/Radio.c ****             // Successfully transmission
+ 101:Drivers/Radio/Src/Radio.c ****             if (NRF24_isAckPayloadAvailable()) {
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s 			page 6
+
+
+ 102:Drivers/Radio/Src/Radio.c ****                 memset(Buffer, '\0', 33);
+ 103:Drivers/Radio/Src/Radio.c ****                 NRF24_read(Buffer, 32);
+ 104:Drivers/Radio/Src/Radio.c ****                 strcat((char *)DataFromFC, (char *)Buffer);
+ 105:Drivers/Radio/Src/Radio.c ****                 // Process data from FC
+ 106:Drivers/Radio/Src/Radio.c ****                 if (IndexOf(DataFromFC, '\n', strlen((char *)DataFromFC)) >=
+ 107:Drivers/Radio/Src/Radio.c ****                     0) {
+ 108:Drivers/Radio/Src/Radio.c ****                     Radio_Process_From_FC(DataFromFC);
+ 109:Drivers/Radio/Src/Radio.c ****                     memset(DataFromFC, '\0', RADIO_MAX_CMD_LENGTH);
+ 110:Drivers/Radio/Src/Radio.c ****                 }
+ 111:Drivers/Radio/Src/Radio.c ****             }
+ 112:Drivers/Radio/Src/Radio.c ****         }
+ 113:Drivers/Radio/Src/Radio.c ****     }
+ 114:Drivers/Radio/Src/Radio.c ****     free(Buffer);
+ 115:Drivers/Radio/Src/Radio.c ****     return RADIO_OK;
+ 116:Drivers/Radio/Src/Radio.c **** }
+ 117:Drivers/Radio/Src/Radio.c **** 
+ 118:Drivers/Radio/Src/Radio.c **** /**
+ 119:Drivers/Radio/Src/Radio.c ****  * @brief Process the data from the FC.
+ 120:Drivers/Radio/Src/Radio.c ****  * @param Buffer The pointer of the buffer.
+ 121:Drivers/Radio/Src/Radio.c ****  * @retval void
+ 122:Drivers/Radio/Src/Radio.c ****  */
+ 123:Drivers/Radio/Src/Radio.c **** void Radio_Process_From_FC(uint8_t *Buffer) {
+ 124:Drivers/Radio/Src/Radio.c ****     if (RadioHandler->enableDebug == true) {
+ 125:Drivers/Radio/Src/Radio.c ****         HAL_UART_Transmit(RadioHandler->Debug->huart, Buffer,
+ 126:Drivers/Radio/Src/Radio.c ****                           strlen((char *)Buffer), 100);
+ 127:Drivers/Radio/Src/Radio.c ****     }
+ 128:Drivers/Radio/Src/Radio.c ****     if (IndexOf(Buffer, '\n', strlen((char *)Buffer)) > 0) {
+ 129:Drivers/Radio/Src/Radio.c ****         uint8_t Struct[ROWS][COLUMNS];
+ 130:Drivers/Radio/Src/Radio.c ****         // Put the process with the Parse string function
+ 131:Drivers/Radio/Src/Radio.c ****         Radio_Control_Parse(Struct, Buffer, ',');
+ 132:Drivers/Radio/Src/Radio.c ****         if (strcmp((const char *)&Struct[0], "MOD") == 0) {
+ 133:Drivers/Radio/Src/Radio.c ****             Radio_Decode_Mode(Struct);
+ 134:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&Struct[0], "ACK") == 0) {
+ 135:Drivers/Radio/Src/Radio.c ****             Radio_Decode_Ack(Struct);
+ 136:Drivers/Radio/Src/Radio.c ****         }
+ 137:Drivers/Radio/Src/Radio.c ****     }
+ 138:Drivers/Radio/Src/Radio.c **** }
+ 139:Drivers/Radio/Src/Radio.c **** 
+ 140:Drivers/Radio/Src/Radio.c **** /**
+ 141:Drivers/Radio/Src/Radio.c ****  * @brief Parse the string with the delimiter.
+ 142:Drivers/Radio/Src/Radio.c ****  * @param TempBuffer The temporary buffer.
+ 143:Drivers/Radio/Src/Radio.c ****  * @param Source The Source of the String.
+ 144:Drivers/Radio/Src/Radio.c ****  * @param Deli the delimiter.
+ 145:Drivers/Radio/Src/Radio.c ****  * @retval int The number of split string.
+ 146:Drivers/Radio/Src/Radio.c ****  */
+ 147:Drivers/Radio/Src/Radio.c **** int Radio_Control_Parse(uint8_t (*TempBuffer)[COLUMNS], uint8_t *Source,
+ 148:Drivers/Radio/Src/Radio.c ****                         const char Deli) {
+ 188              		.loc 1 148 42 is_stmt 1 view -0
+ 189              		.cfi_startproc
+ 190              		@ args = 0, pretend = 0, frame = 8
+ 191              		@ frame_needed = 0, uses_anonymous_args = 0
+ 192              		.loc 1 148 42 is_stmt 0 view .LVU41
+ 193 0000 30B5     		push	{r4, r5, lr}
+ 194              	.LCFI6:
+ 195              		.cfi_def_cfa_offset 12
+ 196              		.cfi_offset 4, -12
+ 197              		.cfi_offset 5, -8
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s 			page 7
+
+
+ 198              		.cfi_offset 14, -4
+ 199 0002 83B0     		sub	sp, sp, #12
+ 200              	.LCFI7:
+ 201              		.cfi_def_cfa_offset 24
+ 202 0004 0546     		mov	r5, r0
+ 203 0006 0846     		mov	r0, r1
+ 204              	.LVL18:
+ 205              		.loc 1 148 42 view .LVU42
+ 206 0008 8DF80720 		strb	r2, [sp, #7]
+ 149:Drivers/Radio/Src/Radio.c ****     int length = 0;
+ 207              		.loc 1 149 5 is_stmt 1 view .LVU43
+ 208              	.LVL19:
+ 150:Drivers/Radio/Src/Radio.c ****     char *Head = malloc(32);
+ 209              		.loc 1 150 5 view .LVU44
+ 151:Drivers/Radio/Src/Radio.c ****     Head = strtok((char *)Source, &Deli);
+ 210              		.loc 1 151 5 view .LVU45
+ 211              		.loc 1 151 12 is_stmt 0 view .LVU46
+ 212 000c 0DF10701 		add	r1, sp, #7
+ 213              	.LVL20:
+ 214              		.loc 1 151 12 view .LVU47
+ 215 0010 FFF7FEFF 		bl	strtok
+ 216              	.LVL21:
+ 217              		.loc 1 151 12 view .LVU48
+ 218 0014 0146     		mov	r1, r0
+ 219              	.LVL22:
+ 152:Drivers/Radio/Src/Radio.c ****     while (Head != NULL) {
+ 220              		.loc 1 152 5 is_stmt 1 view .LVU49
+ 149:Drivers/Radio/Src/Radio.c ****     char *Head = malloc(32);
+ 221              		.loc 1 149 9 is_stmt 0 view .LVU50
+ 222 0016 0024     		movs	r4, #0
+ 223              		.loc 1 152 11 view .LVU51
+ 224 0018 0AE0     		b	.L6
+ 225              	.LVL23:
+ 226              	.L7:
+ 153:Drivers/Radio/Src/Radio.c ****         strcpy((char *)&(TempBuffer)[length], Head);
+ 227              		.loc 1 153 9 is_stmt 1 view .LVU52
+ 228 001a 05EB4410 		add	r0, r5, r4, lsl #5
+ 229              	.LVL24:
+ 230              		.loc 1 153 9 is_stmt 0 view .LVU53
+ 231 001e FFF7FEFF 		bl	strcpy
+ 232              	.LVL25:
+ 154:Drivers/Radio/Src/Radio.c ****         length++;
+ 233              		.loc 1 154 9 is_stmt 1 view .LVU54
+ 234              		.loc 1 154 15 is_stmt 0 view .LVU55
+ 235 0022 0134     		adds	r4, r4, #1
+ 236              	.LVL26:
+ 155:Drivers/Radio/Src/Radio.c ****         Head = strtok(NULL, &Deli);
+ 237              		.loc 1 155 9 is_stmt 1 view .LVU56
+ 238              		.loc 1 155 16 is_stmt 0 view .LVU57
+ 239 0024 0DF10701 		add	r1, sp, #7
+ 240 0028 0020     		movs	r0, #0
+ 241 002a FFF7FEFF 		bl	strtok
+ 242              	.LVL27:
+ 243 002e 0146     		mov	r1, r0
+ 244              	.LVL28:
+ 245              	.L6:
+ 152:Drivers/Radio/Src/Radio.c ****         strcpy((char *)&(TempBuffer)[length], Head);
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s 			page 8
+
+
+ 246              		.loc 1 152 11 is_stmt 1 view .LVU58
+ 247 0030 0029     		cmp	r1, #0
+ 248 0032 F2D1     		bne	.L7
+ 156:Drivers/Radio/Src/Radio.c ****     }
+ 157:Drivers/Radio/Src/Radio.c ****     free(Head);
+ 249              		.loc 1 157 5 view .LVU59
+ 250 0034 0846     		mov	r0, r1
+ 251              		.loc 1 157 5 is_stmt 0 view .LVU60
+ 252 0036 FFF7FEFF 		bl	free
+ 253              	.LVL29:
+ 158:Drivers/Radio/Src/Radio.c ****     return length;
+ 254              		.loc 1 158 5 is_stmt 1 view .LVU61
+ 159:Drivers/Radio/Src/Radio.c **** }
+ 255              		.loc 1 159 1 is_stmt 0 view .LVU62
+ 256 003a 2046     		mov	r0, r4
+ 257 003c 03B0     		add	sp, sp, #12
+ 258              	.LCFI8:
+ 259              		.cfi_def_cfa_offset 12
+ 260              		@ sp needed
+ 261 003e 30BD     		pop	{r4, r5, pc}
+ 262              		.loc 1 159 1 view .LVU63
+ 263              		.cfi_endproc
+ 264              	.LFE78:
+ 266              		.section	.rodata.Radio_Decode_CMD.str1.4,"aMS",%progbits,1
+ 267              		.align	2
+ 268              	.LC0:
+ 269 0000 434D4400 		.ascii	"CMD\000"
+ 270              		.align	2
+ 271              	.LC1:
+ 272 0004 5400     		.ascii	"T\000"
+ 273 0006 0000     		.align	2
+ 274              	.LC2:
+ 275 0008 5200     		.ascii	"R\000"
+ 276 000a 0000     		.align	2
+ 277              	.LC3:
+ 278 000c 5000     		.ascii	"P\000"
+ 279 000e 0000     		.align	2
+ 280              	.LC4:
+ 281 0010 5900     		.ascii	"Y\000"
+ 282              		.section	.text.Radio_Decode_CMD,"ax",%progbits
+ 283              		.align	1
+ 284              		.global	Radio_Decode_CMD
+ 285              		.syntax unified
+ 286              		.thumb
+ 287              		.thumb_func
+ 289              	Radio_Decode_CMD:
+ 290              	.LVL30:
+ 291              	.LFB79:
+ 160:Drivers/Radio/Src/Radio.c **** 
+ 161:Drivers/Radio/Src/Radio.c **** /**
+ 162:Drivers/Radio/Src/Radio.c ****  * @brief Decode the CMD message.
+ 163:Drivers/Radio/Src/Radio.c ****  * @param Struct The Structural Buffer.
+ 164:Drivers/Radio/Src/Radio.c ****  * @retval ControlStatus_t
+ 165:Drivers/Radio/Src/Radio.c ****  */
+ 166:Drivers/Radio/Src/Radio.c **** void Radio_Decode_CMD(uint8_t (*Struct)[COLUMNS]) {
+ 292              		.loc 1 166 51 is_stmt 1 view -0
+ 293              		.cfi_startproc
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s 			page 9
+
+
+ 294              		@ args = 0, pretend = 0, frame = 0
+ 295              		@ frame_needed = 0, uses_anonymous_args = 0
+ 296              		.loc 1 166 51 is_stmt 0 view .LVU65
+ 297 0000 2DE9F041 		push	{r4, r5, r6, r7, r8, lr}
+ 298              	.LCFI9:
+ 299              		.cfi_def_cfa_offset 24
+ 300              		.cfi_offset 4, -24
+ 301              		.cfi_offset 5, -20
+ 302              		.cfi_offset 6, -16
+ 303              		.cfi_offset 7, -12
+ 304              		.cfi_offset 8, -8
+ 305              		.cfi_offset 14, -4
+ 306 0004 0546     		mov	r5, r0
+ 167:Drivers/Radio/Src/Radio.c ****     int index = 1;
+ 307              		.loc 1 167 5 is_stmt 1 view .LVU66
+ 308              	.LVL31:
+ 168:Drivers/Radio/Src/Radio.c ****     Joystick_t *Control = &RadioHandler->Display->Joys;
+ 309              		.loc 1 168 5 view .LVU67
+ 310              		.loc 1 168 40 is_stmt 0 view .LVU68
+ 311 0006 244B     		ldr	r3, .L21
+ 312 0008 1B68     		ldr	r3, [r3]
+ 313 000a D3F83C80 		ldr	r8, [r3, #60]
+ 314              	.LVL32:
+ 169:Drivers/Radio/Src/Radio.c ****     if (strcmp((const char *)&Struct[0], "CMD") != 0) return;
+ 315              		.loc 1 169 5 is_stmt 1 view .LVU69
+ 316              		.loc 1 169 9 is_stmt 0 view .LVU70
+ 317 000e 2349     		ldr	r1, .L21+4
+ 318 0010 FFF7FEFF 		bl	strcmp
+ 319              	.LVL33:
+ 320              		.loc 1 169 8 view .LVU71
+ 321 0014 0028     		cmp	r0, #0
+ 322 0016 3DD1     		bne	.L9
+ 167:Drivers/Radio/Src/Radio.c ****     int index = 1;
+ 323              		.loc 1 167 9 view .LVU72
+ 324 0018 0124     		movs	r4, #1
+ 325 001a 07E0     		b	.L11
+ 326              	.LVL34:
+ 327              	.L18:
+ 170:Drivers/Radio/Src/Radio.c ****     while (Struct[index][0] != '\0') {
+ 171:Drivers/Radio/Src/Radio.c ****         if (strcmp((const char *)&Struct[index], "T") == 0) {
+ 172:Drivers/Radio/Src/Radio.c ****             Control->Thrust = atoi((const char *)&Struct[index + 1]);
+ 328              		.loc 1 172 13 is_stmt 1 view .LVU73
+ 329              		.loc 1 172 57 is_stmt 0 view .LVU74
+ 330 001c 781C     		adds	r0, r7, #1
+ 331              		.loc 1 172 31 view .LVU75
+ 332 001e 05EB4010 		add	r0, r5, r0, lsl #5
+ 333 0022 FFF7FEFF 		bl	atoi
+ 334              	.LVL35:
+ 335              		.loc 1 172 29 view .LVU76
+ 336 0026 A8F84800 		strh	r0, [r8, #72]	@ movhi
+ 337              	.L13:
+ 173:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&Struct[index], "R") == 0) {
+ 174:Drivers/Radio/Src/Radio.c ****             Control->Roll = atoi((const char *)&Struct[index + 1]);
+ 175:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&Struct[index], "P") == 0) {
+ 176:Drivers/Radio/Src/Radio.c ****             Control->Pitch = atoi((const char *)&Struct[index + 1]);
+ 177:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&Struct[index], "Y") == 0) {
+ 178:Drivers/Radio/Src/Radio.c ****             Control->Yaw = atoi((const char *)&Struct[index + 1]);
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s 			page 10
+
+
+ 179:Drivers/Radio/Src/Radio.c ****         }
+ 180:Drivers/Radio/Src/Radio.c ****         index += 2;
+ 338              		.loc 1 180 9 is_stmt 1 view .LVU77
+ 339              		.loc 1 180 15 is_stmt 0 view .LVU78
+ 340 002a 0234     		adds	r4, r4, #2
+ 341              	.LVL36:
+ 342              	.L11:
+ 170:Drivers/Radio/Src/Radio.c ****     while (Struct[index][0] != '\0') {
+ 343              		.loc 1 170 11 is_stmt 1 view .LVU79
+ 170:Drivers/Radio/Src/Radio.c ****     while (Struct[index][0] != '\0') {
+ 344              		.loc 1 170 18 is_stmt 0 view .LVU80
+ 345 002c 2746     		mov	r7, r4
+ 346 002e 6301     		lsls	r3, r4, #5
+ 347 0030 05EB4416 		add	r6, r5, r4, lsl #5
+ 170:Drivers/Radio/Src/Radio.c ****     while (Struct[index][0] != '\0') {
+ 348              		.loc 1 170 25 view .LVU81
+ 349 0034 EB5C     		ldrb	r3, [r5, r3]	@ zero_extendqisi2
+ 170:Drivers/Radio/Src/Radio.c ****     while (Struct[index][0] != '\0') {
+ 350              		.loc 1 170 11 view .LVU82
+ 351 0036 6BB3     		cbz	r3, .L9
+ 171:Drivers/Radio/Src/Radio.c ****             Control->Thrust = atoi((const char *)&Struct[index + 1]);
+ 352              		.loc 1 171 9 is_stmt 1 view .LVU83
+ 171:Drivers/Radio/Src/Radio.c ****             Control->Thrust = atoi((const char *)&Struct[index + 1]);
+ 353              		.loc 1 171 13 is_stmt 0 view .LVU84
+ 354 0038 1949     		ldr	r1, .L21+8
+ 355 003a 3046     		mov	r0, r6
+ 356 003c FFF7FEFF 		bl	strcmp
+ 357              	.LVL37:
+ 171:Drivers/Radio/Src/Radio.c ****             Control->Thrust = atoi((const char *)&Struct[index + 1]);
+ 358              		.loc 1 171 12 view .LVU85
+ 359 0040 0028     		cmp	r0, #0
+ 360 0042 EBD0     		beq	.L18
+ 173:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&Struct[index], "R") == 0) {
+ 361              		.loc 1 173 16 is_stmt 1 view .LVU86
+ 173:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&Struct[index], "R") == 0) {
+ 362              		.loc 1 173 20 is_stmt 0 view .LVU87
+ 363 0044 1749     		ldr	r1, .L21+12
+ 364 0046 3046     		mov	r0, r6
+ 365 0048 FFF7FEFF 		bl	strcmp
+ 366              	.LVL38:
+ 173:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&Struct[index], "R") == 0) {
+ 367              		.loc 1 173 19 view .LVU88
+ 368 004c 90B1     		cbz	r0, .L19
+ 175:Drivers/Radio/Src/Radio.c ****             Control->Pitch = atoi((const char *)&Struct[index + 1]);
+ 369              		.loc 1 175 16 is_stmt 1 view .LVU89
+ 175:Drivers/Radio/Src/Radio.c ****             Control->Pitch = atoi((const char *)&Struct[index + 1]);
+ 370              		.loc 1 175 20 is_stmt 0 view .LVU90
+ 371 004e 1649     		ldr	r1, .L21+16
+ 372 0050 3046     		mov	r0, r6
+ 373 0052 FFF7FEFF 		bl	strcmp
+ 374              	.LVL39:
+ 175:Drivers/Radio/Src/Radio.c ****             Control->Pitch = atoi((const char *)&Struct[index + 1]);
+ 375              		.loc 1 175 19 view .LVU91
+ 376 0056 A8B1     		cbz	r0, .L20
+ 177:Drivers/Radio/Src/Radio.c ****             Control->Yaw = atoi((const char *)&Struct[index + 1]);
+ 377              		.loc 1 177 16 is_stmt 1 view .LVU92
+ 177:Drivers/Radio/Src/Radio.c ****             Control->Yaw = atoi((const char *)&Struct[index + 1]);
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s 			page 11
+
+
+ 378              		.loc 1 177 20 is_stmt 0 view .LVU93
+ 379 0058 1449     		ldr	r1, .L21+20
+ 380 005a 3046     		mov	r0, r6
+ 381 005c FFF7FEFF 		bl	strcmp
+ 382              	.LVL40:
+ 177:Drivers/Radio/Src/Radio.c ****             Control->Yaw = atoi((const char *)&Struct[index + 1]);
+ 383              		.loc 1 177 19 view .LVU94
+ 384 0060 0028     		cmp	r0, #0
+ 385 0062 E2D1     		bne	.L13
+ 178:Drivers/Radio/Src/Radio.c ****         }
+ 386              		.loc 1 178 13 is_stmt 1 view .LVU95
+ 178:Drivers/Radio/Src/Radio.c ****         }
+ 387              		.loc 1 178 54 is_stmt 0 view .LVU96
+ 388 0064 781C     		adds	r0, r7, #1
+ 178:Drivers/Radio/Src/Radio.c ****         }
+ 389              		.loc 1 178 28 view .LVU97
+ 390 0066 05EB4010 		add	r0, r5, r0, lsl #5
+ 391 006a FFF7FEFF 		bl	atoi
+ 392              	.LVL41:
+ 178:Drivers/Radio/Src/Radio.c ****         }
+ 393              		.loc 1 178 26 view .LVU98
+ 394 006e C8F85400 		str	r0, [r8, #84]
+ 395 0072 DAE7     		b	.L13
+ 396              	.L19:
+ 174:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&Struct[index], "P") == 0) {
+ 397              		.loc 1 174 13 is_stmt 1 view .LVU99
+ 174:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&Struct[index], "P") == 0) {
+ 398              		.loc 1 174 55 is_stmt 0 view .LVU100
+ 399 0074 781C     		adds	r0, r7, #1
+ 174:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&Struct[index], "P") == 0) {
+ 400              		.loc 1 174 29 view .LVU101
+ 401 0076 05EB4010 		add	r0, r5, r0, lsl #5
+ 402 007a FFF7FEFF 		bl	atoi
+ 403              	.LVL42:
+ 174:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&Struct[index], "P") == 0) {
+ 404              		.loc 1 174 27 view .LVU102
+ 405 007e C8F84C00 		str	r0, [r8, #76]
+ 406 0082 D2E7     		b	.L13
+ 407              	.L20:
+ 176:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&Struct[index], "Y") == 0) {
+ 408              		.loc 1 176 13 is_stmt 1 view .LVU103
+ 176:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&Struct[index], "Y") == 0) {
+ 409              		.loc 1 176 56 is_stmt 0 view .LVU104
+ 410 0084 781C     		adds	r0, r7, #1
+ 176:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&Struct[index], "Y") == 0) {
+ 411              		.loc 1 176 30 view .LVU105
+ 412 0086 05EB4010 		add	r0, r5, r0, lsl #5
+ 413 008a FFF7FEFF 		bl	atoi
+ 414              	.LVL43:
+ 176:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&Struct[index], "Y") == 0) {
+ 415              		.loc 1 176 28 view .LVU106
+ 416 008e C8F85000 		str	r0, [r8, #80]
+ 417 0092 CAE7     		b	.L13
+ 418              	.LVL44:
+ 419              	.L9:
+ 181:Drivers/Radio/Src/Radio.c ****     }
+ 182:Drivers/Radio/Src/Radio.c **** }
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s 			page 12
+
+
+ 420              		.loc 1 182 1 view .LVU107
+ 421 0094 BDE8F081 		pop	{r4, r5, r6, r7, r8, pc}
+ 422              	.LVL45:
+ 423              	.L22:
+ 424              		.loc 1 182 1 view .LVU108
+ 425              		.align	2
+ 426              	.L21:
+ 427 0098 00000000 		.word	.LANCHOR0
+ 428 009c 00000000 		.word	.LC0
+ 429 00a0 04000000 		.word	.LC1
+ 430 00a4 08000000 		.word	.LC2
+ 431 00a8 0C000000 		.word	.LC3
+ 432 00ac 10000000 		.word	.LC4
+ 433              		.cfi_endproc
+ 434              	.LFE79:
+ 436              		.section	.rodata.Radio_Decode_PID.str1.4,"aMS",%progbits,1
+ 437              		.align	2
+ 438              	.LC5:
+ 439 0000 50494400 		.ascii	"PID\000"
+ 440              		.align	2
+ 441              	.LC6:
+ 442 0004 505200   		.ascii	"PR\000"
+ 443              		.global	__aeabi_d2f
+ 444 0007 00       		.align	2
+ 445              	.LC7:
+ 446 0008 495200   		.ascii	"IR\000"
+ 447 000b 00       		.align	2
+ 448              	.LC8:
+ 449 000c 445200   		.ascii	"DR\000"
+ 450 000f 00       		.align	2
+ 451              	.LC9:
+ 452 0010 505000   		.ascii	"PP\000"
+ 453 0013 00       		.align	2
+ 454              	.LC10:
+ 455 0014 495000   		.ascii	"IP\000"
+ 456 0017 00       		.align	2
+ 457              	.LC11:
+ 458 0018 445000   		.ascii	"DP\000"
+ 459 001b 00       		.align	2
+ 460              	.LC12:
+ 461 001c 505900   		.ascii	"PY\000"
+ 462 001f 00       		.align	2
+ 463              	.LC13:
+ 464 0020 495900   		.ascii	"IY\000"
+ 465 0023 00       		.align	2
+ 466              	.LC14:
+ 467 0024 445900   		.ascii	"DY\000"
+ 468 0027 00       		.align	2
+ 469              	.LC15:
+ 470 0028 504100   		.ascii	"PA\000"
+ 471 002b 00       		.align	2
+ 472              	.LC16:
+ 473 002c 494100   		.ascii	"IA\000"
+ 474 002f 00       		.align	2
+ 475              	.LC17:
+ 476 0030 444100   		.ascii	"DA\000"
+ 477 0033 00       		.align	2
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s 			page 13
+
+
+ 478              	.LC18:
+ 479 0034 504700   		.ascii	"PG\000"
+ 480 0037 00       		.align	2
+ 481              	.LC19:
+ 482 0038 494700   		.ascii	"IG\000"
+ 483 003b 00       		.align	2
+ 484              	.LC20:
+ 485 003c 444700   		.ascii	"DG\000"
+ 486              		.section	.text.Radio_Decode_PID,"ax",%progbits
+ 487              		.align	1
+ 488              		.global	Radio_Decode_PID
+ 489              		.syntax unified
+ 490              		.thumb
+ 491              		.thumb_func
+ 493              	Radio_Decode_PID:
+ 494              	.LVL46:
+ 495              	.LFB80:
+ 183:Drivers/Radio/Src/Radio.c **** 
+ 184:Drivers/Radio/Src/Radio.c **** /**
+ 185:Drivers/Radio/Src/Radio.c ****  * @brief Decode the PID message.
+ 186:Drivers/Radio/Src/Radio.c ****  * @param StructBuffer The Structural Buffer.
+ 187:Drivers/Radio/Src/Radio.c ****  * @retval void
+ 188:Drivers/Radio/Src/Radio.c ****  */
+ 189:Drivers/Radio/Src/Radio.c **** void Radio_Decode_PID(uint8_t (*StructBuffer)[COLUMNS]) {
+ 496              		.loc 1 189 57 is_stmt 1 view -0
+ 497              		.cfi_startproc
+ 498              		@ args = 0, pretend = 0, frame = 0
+ 499              		@ frame_needed = 0, uses_anonymous_args = 0
+ 500              		.loc 1 189 57 is_stmt 0 view .LVU110
+ 501 0000 2DE9F041 		push	{r4, r5, r6, r7, r8, lr}
+ 502              	.LCFI10:
+ 503              		.cfi_def_cfa_offset 24
+ 504              		.cfi_offset 4, -24
+ 505              		.cfi_offset 5, -20
+ 506              		.cfi_offset 6, -16
+ 507              		.cfi_offset 7, -12
+ 508              		.cfi_offset 8, -8
+ 509              		.cfi_offset 14, -4
+ 510 0004 0746     		mov	r7, r0
+ 190:Drivers/Radio/Src/Radio.c ****     int index = 1;
+ 511              		.loc 1 190 5 is_stmt 1 view .LVU111
+ 512              	.LVL47:
+ 191:Drivers/Radio/Src/Radio.c ****     ControlPid_t *ControlPid = &RadioHandler->Display->Pid;
+ 513              		.loc 1 191 5 view .LVU112
+ 514              		.loc 1 191 45 is_stmt 0 view .LVU113
+ 515 0006 844B     		ldr	r3, .L57
+ 516 0008 1B68     		ldr	r3, [r3]
+ 517 000a D3F83C80 		ldr	r8, [r3, #60]
+ 518              	.LVL48:
+ 192:Drivers/Radio/Src/Radio.c ****     if (strcmp((const char *)&StructBuffer[0], "PID") != 0) return;
+ 519              		.loc 1 192 5 is_stmt 1 view .LVU114
+ 520              		.loc 1 192 9 is_stmt 0 view .LVU115
+ 521 000e 8349     		ldr	r1, .L57+4
+ 522 0010 FFF7FEFF 		bl	strcmp
+ 523              	.LVL49:
+ 524              		.loc 1 192 8 view .LVU116
+ 525 0014 0028     		cmp	r0, #0
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s 			page 14
+
+
+ 526 0016 40F0FD80 		bne	.L23
+ 190:Drivers/Radio/Src/Radio.c ****     int index = 1;
+ 527              		.loc 1 190 9 view .LVU117
+ 528 001a 0124     		movs	r4, #1
+ 529 001c 09E0     		b	.L25
+ 530              	.LVL50:
+ 531              	.L43:
+ 193:Drivers/Radio/Src/Radio.c ****     while (StructBuffer[index][0] != '\0') {
+ 194:Drivers/Radio/Src/Radio.c ****         if (strcmp((const char *)&StructBuffer[index], "PR") == 0) {
+ 195:Drivers/Radio/Src/Radio.c ****             ControlPid->Roll.P = atof((const char *)&StructBuffer[index + 1]);
+ 532              		.loc 1 195 13 is_stmt 1 view .LVU118
+ 533              		.loc 1 195 66 is_stmt 0 view .LVU119
+ 534 001e 701C     		adds	r0, r6, #1
+ 535              		.loc 1 195 34 view .LVU120
+ 536 0020 07EB4010 		add	r0, r7, r0, lsl #5
+ 537 0024 FFF7FEFF 		bl	atof
+ 538              	.LVL51:
+ 539 0028 FFF7FEFF 		bl	__aeabi_d2f
+ 540              	.LVL52:
+ 541              		.loc 1 195 32 view .LVU121
+ 542 002c C8F80C00 		str	r0, [r8, #12]	@ float
+ 543              	.L27:
+ 196:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "IR") == 0) {
+ 197:Drivers/Radio/Src/Radio.c ****             ControlPid->Roll.I = atof((const char *)&StructBuffer[index + 1]);
+ 198:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "DR") == 0) {
+ 199:Drivers/Radio/Src/Radio.c ****             ControlPid->Roll.D = atof((const char *)&StructBuffer[index + 1]);
+ 200:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "PP") == 0) {
+ 201:Drivers/Radio/Src/Radio.c ****             ControlPid->Pitch.P = atof((const char *)&StructBuffer[index + 1]);
+ 202:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "IP") == 0) {
+ 203:Drivers/Radio/Src/Radio.c ****             ControlPid->Pitch.I = atof((const char *)&StructBuffer[index + 1]);
+ 204:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "DP") == 0) {
+ 205:Drivers/Radio/Src/Radio.c ****             ControlPid->Pitch.D = atof((const char *)&StructBuffer[index + 1]);
+ 206:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "PY") == 0) {
+ 207:Drivers/Radio/Src/Radio.c ****             ControlPid->Yaw.P = atof((const char *)&StructBuffer[index + 1]);
+ 208:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "IY") == 0) {
+ 209:Drivers/Radio/Src/Radio.c ****             ControlPid->Yaw.I = atof((const char *)&StructBuffer[index + 1]);
+ 210:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "DY") == 0) {
+ 211:Drivers/Radio/Src/Radio.c ****             ControlPid->Yaw.D = atof((const char *)&StructBuffer[index + 1]);
+ 212:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "PA") == 0) {
+ 213:Drivers/Radio/Src/Radio.c ****             ControlPid->Altitude.P =
+ 214:Drivers/Radio/Src/Radio.c ****                 atof((const char *)&StructBuffer[index + 1]);
+ 215:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "IA") == 0) {
+ 216:Drivers/Radio/Src/Radio.c ****             ControlPid->Altitude.I =
+ 217:Drivers/Radio/Src/Radio.c ****                 atof((const char *)&StructBuffer[index + 1]);
+ 218:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "DA") == 0) {
+ 219:Drivers/Radio/Src/Radio.c ****             ControlPid->Altitude.D =
+ 220:Drivers/Radio/Src/Radio.c ****                 atof((const char *)&StructBuffer[index + 1]);
+ 221:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "PG") == 0) {
+ 222:Drivers/Radio/Src/Radio.c ****             ControlPid->Gps.P = atof((const char *)&StructBuffer[index + 1]);
+ 223:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "IG") == 0) {
+ 224:Drivers/Radio/Src/Radio.c ****             ControlPid->Gps.I = atof((const char *)&StructBuffer[index + 1]);
+ 225:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "DG") == 0) {
+ 226:Drivers/Radio/Src/Radio.c ****             ControlPid->Gps.D = atof((const char *)&StructBuffer[index + 1]);
+ 227:Drivers/Radio/Src/Radio.c ****         }
+ 228:Drivers/Radio/Src/Radio.c ****         index += 2;
+ 544              		.loc 1 228 9 is_stmt 1 view .LVU122
+ 545              		.loc 1 228 15 is_stmt 0 view .LVU123
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s 			page 15
+
+
+ 546 0030 0234     		adds	r4, r4, #2
+ 547              	.LVL53:
+ 548              	.L25:
+ 193:Drivers/Radio/Src/Radio.c ****     while (StructBuffer[index][0] != '\0') {
+ 549              		.loc 1 193 11 is_stmt 1 view .LVU124
+ 193:Drivers/Radio/Src/Radio.c ****     while (StructBuffer[index][0] != '\0') {
+ 550              		.loc 1 193 24 is_stmt 0 view .LVU125
+ 551 0032 2646     		mov	r6, r4
+ 552 0034 6301     		lsls	r3, r4, #5
+ 553 0036 07EB4415 		add	r5, r7, r4, lsl #5
+ 193:Drivers/Radio/Src/Radio.c ****     while (StructBuffer[index][0] != '\0') {
+ 554              		.loc 1 193 31 view .LVU126
+ 555 003a FB5C     		ldrb	r3, [r7, r3]	@ zero_extendqisi2
+ 193:Drivers/Radio/Src/Radio.c ****     while (StructBuffer[index][0] != '\0') {
+ 556              		.loc 1 193 11 view .LVU127
+ 557 003c 002B     		cmp	r3, #0
+ 558 003e 00F0E980 		beq	.L23
+ 194:Drivers/Radio/Src/Radio.c ****             ControlPid->Roll.P = atof((const char *)&StructBuffer[index + 1]);
+ 559              		.loc 1 194 9 is_stmt 1 view .LVU128
+ 194:Drivers/Radio/Src/Radio.c ****             ControlPid->Roll.P = atof((const char *)&StructBuffer[index + 1]);
+ 560              		.loc 1 194 13 is_stmt 0 view .LVU129
+ 561 0042 7749     		ldr	r1, .L57+8
+ 562 0044 2846     		mov	r0, r5
+ 563 0046 FFF7FEFF 		bl	strcmp
+ 564              	.LVL54:
+ 194:Drivers/Radio/Src/Radio.c ****             ControlPid->Roll.P = atof((const char *)&StructBuffer[index + 1]);
+ 565              		.loc 1 194 12 view .LVU130
+ 566 004a 0028     		cmp	r0, #0
+ 567 004c E7D0     		beq	.L43
+ 196:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "IR") == 0) {
+ 568              		.loc 1 196 16 is_stmt 1 view .LVU131
+ 196:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "IR") == 0) {
+ 569              		.loc 1 196 20 is_stmt 0 view .LVU132
+ 570 004e 7549     		ldr	r1, .L57+12
+ 571 0050 2846     		mov	r0, r5
+ 572 0052 FFF7FEFF 		bl	strcmp
+ 573              	.LVL55:
+ 196:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "IR") == 0) {
+ 574              		.loc 1 196 19 view .LVU133
+ 575 0056 0028     		cmp	r0, #0
+ 576 0058 5AD0     		beq	.L44
+ 198:Drivers/Radio/Src/Radio.c ****             ControlPid->Roll.D = atof((const char *)&StructBuffer[index + 1]);
+ 577              		.loc 1 198 16 is_stmt 1 view .LVU134
+ 198:Drivers/Radio/Src/Radio.c ****             ControlPid->Roll.D = atof((const char *)&StructBuffer[index + 1]);
+ 578              		.loc 1 198 20 is_stmt 0 view .LVU135
+ 579 005a 7349     		ldr	r1, .L57+16
+ 580 005c 2846     		mov	r0, r5
+ 581 005e FFF7FEFF 		bl	strcmp
+ 582              	.LVL56:
+ 198:Drivers/Radio/Src/Radio.c ****             ControlPid->Roll.D = atof((const char *)&StructBuffer[index + 1]);
+ 583              		.loc 1 198 19 view .LVU136
+ 584 0062 0028     		cmp	r0, #0
+ 585 0064 5ED0     		beq	.L45
+ 200:Drivers/Radio/Src/Radio.c ****             ControlPid->Pitch.P = atof((const char *)&StructBuffer[index + 1]);
+ 586              		.loc 1 200 16 is_stmt 1 view .LVU137
+ 200:Drivers/Radio/Src/Radio.c ****             ControlPid->Pitch.P = atof((const char *)&StructBuffer[index + 1]);
+ 587              		.loc 1 200 20 is_stmt 0 view .LVU138
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s 			page 16
+
+
+ 588 0066 7149     		ldr	r1, .L57+20
+ 589 0068 2846     		mov	r0, r5
+ 590 006a FFF7FEFF 		bl	strcmp
+ 591              	.LVL57:
+ 200:Drivers/Radio/Src/Radio.c ****             ControlPid->Pitch.P = atof((const char *)&StructBuffer[index + 1]);
+ 592              		.loc 1 200 19 view .LVU139
+ 593 006e 0028     		cmp	r0, #0
+ 594 0070 62D0     		beq	.L46
+ 202:Drivers/Radio/Src/Radio.c ****             ControlPid->Pitch.I = atof((const char *)&StructBuffer[index + 1]);
+ 595              		.loc 1 202 16 is_stmt 1 view .LVU140
+ 202:Drivers/Radio/Src/Radio.c ****             ControlPid->Pitch.I = atof((const char *)&StructBuffer[index + 1]);
+ 596              		.loc 1 202 20 is_stmt 0 view .LVU141
+ 597 0072 6F49     		ldr	r1, .L57+24
+ 598 0074 2846     		mov	r0, r5
+ 599 0076 FFF7FEFF 		bl	strcmp
+ 600              	.LVL58:
+ 202:Drivers/Radio/Src/Radio.c ****             ControlPid->Pitch.I = atof((const char *)&StructBuffer[index + 1]);
+ 601              		.loc 1 202 19 view .LVU142
+ 602 007a 0028     		cmp	r0, #0
+ 603 007c 66D0     		beq	.L47
+ 204:Drivers/Radio/Src/Radio.c ****             ControlPid->Pitch.D = atof((const char *)&StructBuffer[index + 1]);
+ 604              		.loc 1 204 16 is_stmt 1 view .LVU143
+ 204:Drivers/Radio/Src/Radio.c ****             ControlPid->Pitch.D = atof((const char *)&StructBuffer[index + 1]);
+ 605              		.loc 1 204 20 is_stmt 0 view .LVU144
+ 606 007e 6D49     		ldr	r1, .L57+28
+ 607 0080 2846     		mov	r0, r5
+ 608 0082 FFF7FEFF 		bl	strcmp
+ 609              	.LVL59:
+ 204:Drivers/Radio/Src/Radio.c ****             ControlPid->Pitch.D = atof((const char *)&StructBuffer[index + 1]);
+ 610              		.loc 1 204 19 view .LVU145
+ 611 0086 0028     		cmp	r0, #0
+ 612 0088 6AD0     		beq	.L48
+ 206:Drivers/Radio/Src/Radio.c ****             ControlPid->Yaw.P = atof((const char *)&StructBuffer[index + 1]);
+ 613              		.loc 1 206 16 is_stmt 1 view .LVU146
+ 206:Drivers/Radio/Src/Radio.c ****             ControlPid->Yaw.P = atof((const char *)&StructBuffer[index + 1]);
+ 614              		.loc 1 206 20 is_stmt 0 view .LVU147
+ 615 008a 6B49     		ldr	r1, .L57+32
+ 616 008c 2846     		mov	r0, r5
+ 617 008e FFF7FEFF 		bl	strcmp
+ 618              	.LVL60:
+ 206:Drivers/Radio/Src/Radio.c ****             ControlPid->Yaw.P = atof((const char *)&StructBuffer[index + 1]);
+ 619              		.loc 1 206 19 view .LVU148
+ 620 0092 0028     		cmp	r0, #0
+ 621 0094 6ED0     		beq	.L49
+ 208:Drivers/Radio/Src/Radio.c ****             ControlPid->Yaw.I = atof((const char *)&StructBuffer[index + 1]);
+ 622              		.loc 1 208 16 is_stmt 1 view .LVU149
+ 208:Drivers/Radio/Src/Radio.c ****             ControlPid->Yaw.I = atof((const char *)&StructBuffer[index + 1]);
+ 623              		.loc 1 208 20 is_stmt 0 view .LVU150
+ 624 0096 6949     		ldr	r1, .L57+36
+ 625 0098 2846     		mov	r0, r5
+ 626 009a FFF7FEFF 		bl	strcmp
+ 627              	.LVL61:
+ 208:Drivers/Radio/Src/Radio.c ****             ControlPid->Yaw.I = atof((const char *)&StructBuffer[index + 1]);
+ 628              		.loc 1 208 19 view .LVU151
+ 629 009e 0028     		cmp	r0, #0
+ 630 00a0 72D0     		beq	.L50
+ 210:Drivers/Radio/Src/Radio.c ****             ControlPid->Yaw.D = atof((const char *)&StructBuffer[index + 1]);
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s 			page 17
+
+
+ 631              		.loc 1 210 16 is_stmt 1 view .LVU152
+ 210:Drivers/Radio/Src/Radio.c ****             ControlPid->Yaw.D = atof((const char *)&StructBuffer[index + 1]);
+ 632              		.loc 1 210 20 is_stmt 0 view .LVU153
+ 633 00a2 6749     		ldr	r1, .L57+40
+ 634 00a4 2846     		mov	r0, r5
+ 635 00a6 FFF7FEFF 		bl	strcmp
+ 636              	.LVL62:
+ 210:Drivers/Radio/Src/Radio.c ****             ControlPid->Yaw.D = atof((const char *)&StructBuffer[index + 1]);
+ 637              		.loc 1 210 19 view .LVU154
+ 638 00aa 0028     		cmp	r0, #0
+ 639 00ac 76D0     		beq	.L51
+ 212:Drivers/Radio/Src/Radio.c ****             ControlPid->Altitude.P =
+ 640              		.loc 1 212 16 is_stmt 1 view .LVU155
+ 212:Drivers/Radio/Src/Radio.c ****             ControlPid->Altitude.P =
+ 641              		.loc 1 212 20 is_stmt 0 view .LVU156
+ 642 00ae 6549     		ldr	r1, .L57+44
+ 643 00b0 2846     		mov	r0, r5
+ 644 00b2 FFF7FEFF 		bl	strcmp
+ 645              	.LVL63:
+ 212:Drivers/Radio/Src/Radio.c ****             ControlPid->Altitude.P =
+ 646              		.loc 1 212 19 view .LVU157
+ 647 00b6 0028     		cmp	r0, #0
+ 648 00b8 7AD0     		beq	.L52
+ 215:Drivers/Radio/Src/Radio.c ****             ControlPid->Altitude.I =
+ 649              		.loc 1 215 16 is_stmt 1 view .LVU158
+ 215:Drivers/Radio/Src/Radio.c ****             ControlPid->Altitude.I =
+ 650              		.loc 1 215 20 is_stmt 0 view .LVU159
+ 651 00ba 6349     		ldr	r1, .L57+48
+ 652 00bc 2846     		mov	r0, r5
+ 653 00be FFF7FEFF 		bl	strcmp
+ 654              	.LVL64:
+ 215:Drivers/Radio/Src/Radio.c ****             ControlPid->Altitude.I =
+ 655              		.loc 1 215 19 view .LVU160
+ 656 00c2 0028     		cmp	r0, #0
+ 657 00c4 7ED0     		beq	.L53
+ 218:Drivers/Radio/Src/Radio.c ****             ControlPid->Altitude.D =
+ 658              		.loc 1 218 16 is_stmt 1 view .LVU161
+ 218:Drivers/Radio/Src/Radio.c ****             ControlPid->Altitude.D =
+ 659              		.loc 1 218 20 is_stmt 0 view .LVU162
+ 660 00c6 6149     		ldr	r1, .L57+52
+ 661 00c8 2846     		mov	r0, r5
+ 662 00ca FFF7FEFF 		bl	strcmp
+ 663              	.LVL65:
+ 218:Drivers/Radio/Src/Radio.c ****             ControlPid->Altitude.D =
+ 664              		.loc 1 218 19 view .LVU163
+ 665 00ce 0028     		cmp	r0, #0
+ 666 00d0 00F08280 		beq	.L54
+ 221:Drivers/Radio/Src/Radio.c ****             ControlPid->Gps.P = atof((const char *)&StructBuffer[index + 1]);
+ 667              		.loc 1 221 16 is_stmt 1 view .LVU164
+ 221:Drivers/Radio/Src/Radio.c ****             ControlPid->Gps.P = atof((const char *)&StructBuffer[index + 1]);
+ 668              		.loc 1 221 20 is_stmt 0 view .LVU165
+ 669 00d4 5E49     		ldr	r1, .L57+56
+ 670 00d6 2846     		mov	r0, r5
+ 671 00d8 FFF7FEFF 		bl	strcmp
+ 672              	.LVL66:
+ 221:Drivers/Radio/Src/Radio.c ****             ControlPid->Gps.P = atof((const char *)&StructBuffer[index + 1]);
+ 673              		.loc 1 221 19 view .LVU166
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s 			page 18
+
+
+ 674 00dc 0028     		cmp	r0, #0
+ 675 00de 00F08580 		beq	.L55
+ 223:Drivers/Radio/Src/Radio.c ****             ControlPid->Gps.I = atof((const char *)&StructBuffer[index + 1]);
+ 676              		.loc 1 223 16 is_stmt 1 view .LVU167
+ 223:Drivers/Radio/Src/Radio.c ****             ControlPid->Gps.I = atof((const char *)&StructBuffer[index + 1]);
+ 677              		.loc 1 223 20 is_stmt 0 view .LVU168
+ 678 00e2 5C49     		ldr	r1, .L57+60
+ 679 00e4 2846     		mov	r0, r5
+ 680 00e6 FFF7FEFF 		bl	strcmp
+ 681              	.LVL67:
+ 223:Drivers/Radio/Src/Radio.c ****             ControlPid->Gps.I = atof((const char *)&StructBuffer[index + 1]);
+ 682              		.loc 1 223 19 view .LVU169
+ 683 00ea 0028     		cmp	r0, #0
+ 684 00ec 00F08880 		beq	.L56
+ 225:Drivers/Radio/Src/Radio.c ****             ControlPid->Gps.D = atof((const char *)&StructBuffer[index + 1]);
+ 685              		.loc 1 225 16 is_stmt 1 view .LVU170
+ 225:Drivers/Radio/Src/Radio.c ****             ControlPid->Gps.D = atof((const char *)&StructBuffer[index + 1]);
+ 686              		.loc 1 225 20 is_stmt 0 view .LVU171
+ 687 00f0 5949     		ldr	r1, .L57+64
+ 688 00f2 2846     		mov	r0, r5
+ 689 00f4 FFF7FEFF 		bl	strcmp
+ 690              	.LVL68:
+ 225:Drivers/Radio/Src/Radio.c ****             ControlPid->Gps.D = atof((const char *)&StructBuffer[index + 1]);
+ 691              		.loc 1 225 19 view .LVU172
+ 692 00f8 0028     		cmp	r0, #0
+ 693 00fa 99D1     		bne	.L27
+ 226:Drivers/Radio/Src/Radio.c ****         }
+ 694              		.loc 1 226 13 is_stmt 1 view .LVU173
+ 226:Drivers/Radio/Src/Radio.c ****         }
+ 695              		.loc 1 226 65 is_stmt 0 view .LVU174
+ 696 00fc 701C     		adds	r0, r6, #1
+ 226:Drivers/Radio/Src/Radio.c ****         }
+ 697              		.loc 1 226 33 view .LVU175
+ 698 00fe 07EB4010 		add	r0, r7, r0, lsl #5
+ 699 0102 FFF7FEFF 		bl	atof
+ 700              	.LVL69:
+ 701 0106 FFF7FEFF 		bl	__aeabi_d2f
+ 702              	.LVL70:
+ 226:Drivers/Radio/Src/Radio.c ****         }
+ 703              		.loc 1 226 31 view .LVU176
+ 704 010a C8F84400 		str	r0, [r8, #68]	@ float
+ 705 010e 8FE7     		b	.L27
+ 706              	.L44:
+ 197:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "DR") == 0) {
+ 707              		.loc 1 197 13 is_stmt 1 view .LVU177
+ 197:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "DR") == 0) {
+ 708              		.loc 1 197 66 is_stmt 0 view .LVU178
+ 709 0110 701C     		adds	r0, r6, #1
+ 197:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "DR") == 0) {
+ 710              		.loc 1 197 34 view .LVU179
+ 711 0112 07EB4010 		add	r0, r7, r0, lsl #5
+ 712 0116 FFF7FEFF 		bl	atof
+ 713              	.LVL71:
+ 714 011a FFF7FEFF 		bl	__aeabi_d2f
+ 715              	.LVL72:
+ 197:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "DR") == 0) {
+ 716              		.loc 1 197 32 view .LVU180
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s 			page 19
+
+
+ 717 011e C8F81000 		str	r0, [r8, #16]	@ float
+ 718 0122 85E7     		b	.L27
+ 719              	.L45:
+ 199:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "PP") == 0) {
+ 720              		.loc 1 199 13 is_stmt 1 view .LVU181
+ 199:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "PP") == 0) {
+ 721              		.loc 1 199 66 is_stmt 0 view .LVU182
+ 722 0124 701C     		adds	r0, r6, #1
+ 199:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "PP") == 0) {
+ 723              		.loc 1 199 34 view .LVU183
+ 724 0126 07EB4010 		add	r0, r7, r0, lsl #5
+ 725 012a FFF7FEFF 		bl	atof
+ 726              	.LVL73:
+ 727 012e FFF7FEFF 		bl	__aeabi_d2f
+ 728              	.LVL74:
+ 199:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "PP") == 0) {
+ 729              		.loc 1 199 32 view .LVU184
+ 730 0132 C8F81400 		str	r0, [r8, #20]	@ float
+ 731 0136 7BE7     		b	.L27
+ 732              	.L46:
+ 201:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "IP") == 0) {
+ 733              		.loc 1 201 13 is_stmt 1 view .LVU185
+ 201:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "IP") == 0) {
+ 734              		.loc 1 201 67 is_stmt 0 view .LVU186
+ 735 0138 701C     		adds	r0, r6, #1
+ 201:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "IP") == 0) {
+ 736              		.loc 1 201 35 view .LVU187
+ 737 013a 07EB4010 		add	r0, r7, r0, lsl #5
+ 738 013e FFF7FEFF 		bl	atof
+ 739              	.LVL75:
+ 740 0142 FFF7FEFF 		bl	__aeabi_d2f
+ 741              	.LVL76:
+ 201:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "IP") == 0) {
+ 742              		.loc 1 201 33 view .LVU188
+ 743 0146 C8F81800 		str	r0, [r8, #24]	@ float
+ 744 014a 71E7     		b	.L27
+ 745              	.L47:
+ 203:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "DP") == 0) {
+ 746              		.loc 1 203 13 is_stmt 1 view .LVU189
+ 203:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "DP") == 0) {
+ 747              		.loc 1 203 67 is_stmt 0 view .LVU190
+ 748 014c 701C     		adds	r0, r6, #1
+ 203:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "DP") == 0) {
+ 749              		.loc 1 203 35 view .LVU191
+ 750 014e 07EB4010 		add	r0, r7, r0, lsl #5
+ 751 0152 FFF7FEFF 		bl	atof
+ 752              	.LVL77:
+ 753 0156 FFF7FEFF 		bl	__aeabi_d2f
+ 754              	.LVL78:
+ 203:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "DP") == 0) {
+ 755              		.loc 1 203 33 view .LVU192
+ 756 015a C8F81C00 		str	r0, [r8, #28]	@ float
+ 757 015e 67E7     		b	.L27
+ 758              	.L48:
+ 205:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "PY") == 0) {
+ 759              		.loc 1 205 13 is_stmt 1 view .LVU193
+ 205:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "PY") == 0) {
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s 			page 20
+
+
+ 760              		.loc 1 205 67 is_stmt 0 view .LVU194
+ 761 0160 701C     		adds	r0, r6, #1
+ 205:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "PY") == 0) {
+ 762              		.loc 1 205 35 view .LVU195
+ 763 0162 07EB4010 		add	r0, r7, r0, lsl #5
+ 764 0166 FFF7FEFF 		bl	atof
+ 765              	.LVL79:
+ 766 016a FFF7FEFF 		bl	__aeabi_d2f
+ 767              	.LVL80:
+ 205:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "PY") == 0) {
+ 768              		.loc 1 205 33 view .LVU196
+ 769 016e C8F82000 		str	r0, [r8, #32]	@ float
+ 770 0172 5DE7     		b	.L27
+ 771              	.L49:
+ 207:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "IY") == 0) {
+ 772              		.loc 1 207 13 is_stmt 1 view .LVU197
+ 207:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "IY") == 0) {
+ 773              		.loc 1 207 65 is_stmt 0 view .LVU198
+ 774 0174 701C     		adds	r0, r6, #1
+ 207:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "IY") == 0) {
+ 775              		.loc 1 207 33 view .LVU199
+ 776 0176 07EB4010 		add	r0, r7, r0, lsl #5
+ 777 017a FFF7FEFF 		bl	atof
+ 778              	.LVL81:
+ 779 017e FFF7FEFF 		bl	__aeabi_d2f
+ 780              	.LVL82:
+ 207:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "IY") == 0) {
+ 781              		.loc 1 207 31 view .LVU200
+ 782 0182 C8F82400 		str	r0, [r8, #36]	@ float
+ 783 0186 53E7     		b	.L27
+ 784              	.L50:
+ 209:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "DY") == 0) {
+ 785              		.loc 1 209 13 is_stmt 1 view .LVU201
+ 209:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "DY") == 0) {
+ 786              		.loc 1 209 65 is_stmt 0 view .LVU202
+ 787 0188 701C     		adds	r0, r6, #1
+ 209:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "DY") == 0) {
+ 788              		.loc 1 209 33 view .LVU203
+ 789 018a 07EB4010 		add	r0, r7, r0, lsl #5
+ 790 018e FFF7FEFF 		bl	atof
+ 791              	.LVL83:
+ 792 0192 FFF7FEFF 		bl	__aeabi_d2f
+ 793              	.LVL84:
+ 209:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "DY") == 0) {
+ 794              		.loc 1 209 31 view .LVU204
+ 795 0196 C8F82800 		str	r0, [r8, #40]	@ float
+ 796 019a 49E7     		b	.L27
+ 797              	.L51:
+ 211:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "PA") == 0) {
+ 798              		.loc 1 211 13 is_stmt 1 view .LVU205
+ 211:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "PA") == 0) {
+ 799              		.loc 1 211 65 is_stmt 0 view .LVU206
+ 800 019c 701C     		adds	r0, r6, #1
+ 211:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "PA") == 0) {
+ 801              		.loc 1 211 33 view .LVU207
+ 802 019e 07EB4010 		add	r0, r7, r0, lsl #5
+ 803 01a2 FFF7FEFF 		bl	atof
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s 			page 21
+
+
+ 804              	.LVL85:
+ 805 01a6 FFF7FEFF 		bl	__aeabi_d2f
+ 806              	.LVL86:
+ 211:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "PA") == 0) {
+ 807              		.loc 1 211 31 view .LVU208
+ 808 01aa C8F82C00 		str	r0, [r8, #44]	@ float
+ 809 01ae 3FE7     		b	.L27
+ 810              	.L52:
+ 213:Drivers/Radio/Src/Radio.c ****                 atof((const char *)&StructBuffer[index + 1]);
+ 811              		.loc 1 213 13 is_stmt 1 view .LVU209
+ 214:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "IA") == 0) {
+ 812              		.loc 1 214 49 is_stmt 0 view .LVU210
+ 813 01b0 701C     		adds	r0, r6, #1
+ 214:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "IA") == 0) {
+ 814              		.loc 1 214 17 view .LVU211
+ 815 01b2 07EB4010 		add	r0, r7, r0, lsl #5
+ 816 01b6 FFF7FEFF 		bl	atof
+ 817              	.LVL87:
+ 818 01ba FFF7FEFF 		bl	__aeabi_d2f
+ 819              	.LVL88:
+ 213:Drivers/Radio/Src/Radio.c ****                 atof((const char *)&StructBuffer[index + 1]);
+ 820              		.loc 1 213 36 view .LVU212
+ 821 01be C8F83000 		str	r0, [r8, #48]	@ float
+ 822 01c2 35E7     		b	.L27
+ 823              	.L53:
+ 216:Drivers/Radio/Src/Radio.c ****                 atof((const char *)&StructBuffer[index + 1]);
+ 824              		.loc 1 216 13 is_stmt 1 view .LVU213
+ 217:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "DA") == 0) {
+ 825              		.loc 1 217 49 is_stmt 0 view .LVU214
+ 826 01c4 701C     		adds	r0, r6, #1
+ 217:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "DA") == 0) {
+ 827              		.loc 1 217 17 view .LVU215
+ 828 01c6 07EB4010 		add	r0, r7, r0, lsl #5
+ 829 01ca FFF7FEFF 		bl	atof
+ 830              	.LVL89:
+ 831 01ce FFF7FEFF 		bl	__aeabi_d2f
+ 832              	.LVL90:
+ 216:Drivers/Radio/Src/Radio.c ****                 atof((const char *)&StructBuffer[index + 1]);
+ 833              		.loc 1 216 36 view .LVU216
+ 834 01d2 C8F83400 		str	r0, [r8, #52]	@ float
+ 835 01d6 2BE7     		b	.L27
+ 836              	.L54:
+ 219:Drivers/Radio/Src/Radio.c ****                 atof((const char *)&StructBuffer[index + 1]);
+ 837              		.loc 1 219 13 is_stmt 1 view .LVU217
+ 220:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "PG") == 0) {
+ 838              		.loc 1 220 49 is_stmt 0 view .LVU218
+ 839 01d8 701C     		adds	r0, r6, #1
+ 220:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "PG") == 0) {
+ 840              		.loc 1 220 17 view .LVU219
+ 841 01da 07EB4010 		add	r0, r7, r0, lsl #5
+ 842 01de FFF7FEFF 		bl	atof
+ 843              	.LVL91:
+ 844 01e2 FFF7FEFF 		bl	__aeabi_d2f
+ 845              	.LVL92:
+ 219:Drivers/Radio/Src/Radio.c ****                 atof((const char *)&StructBuffer[index + 1]);
+ 846              		.loc 1 219 36 view .LVU220
+ 847 01e6 C8F83800 		str	r0, [r8, #56]	@ float
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s 			page 22
+
+
+ 848 01ea 21E7     		b	.L27
+ 849              	.L55:
+ 222:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "IG") == 0) {
+ 850              		.loc 1 222 13 is_stmt 1 view .LVU221
+ 222:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "IG") == 0) {
+ 851              		.loc 1 222 65 is_stmt 0 view .LVU222
+ 852 01ec 701C     		adds	r0, r6, #1
+ 222:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "IG") == 0) {
+ 853              		.loc 1 222 33 view .LVU223
+ 854 01ee 07EB4010 		add	r0, r7, r0, lsl #5
+ 855 01f2 FFF7FEFF 		bl	atof
+ 856              	.LVL93:
+ 857 01f6 FFF7FEFF 		bl	__aeabi_d2f
+ 858              	.LVL94:
+ 222:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "IG") == 0) {
+ 859              		.loc 1 222 31 view .LVU224
+ 860 01fa C8F83C00 		str	r0, [r8, #60]	@ float
+ 861 01fe 17E7     		b	.L27
+ 862              	.L56:
+ 224:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "DG") == 0) {
+ 863              		.loc 1 224 13 is_stmt 1 view .LVU225
+ 224:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "DG") == 0) {
+ 864              		.loc 1 224 65 is_stmt 0 view .LVU226
+ 865 0200 701C     		adds	r0, r6, #1
+ 224:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "DG") == 0) {
+ 866              		.loc 1 224 33 view .LVU227
+ 867 0202 07EB4010 		add	r0, r7, r0, lsl #5
+ 868 0206 FFF7FEFF 		bl	atof
+ 869              	.LVL95:
+ 870 020a FFF7FEFF 		bl	__aeabi_d2f
+ 871              	.LVL96:
+ 224:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "DG") == 0) {
+ 872              		.loc 1 224 31 view .LVU228
+ 873 020e C8F84000 		str	r0, [r8, #64]	@ float
+ 874 0212 0DE7     		b	.L27
+ 875              	.LVL97:
+ 876              	.L23:
+ 229:Drivers/Radio/Src/Radio.c ****     }
+ 230:Drivers/Radio/Src/Radio.c **** }
+ 877              		.loc 1 230 1 view .LVU229
+ 878 0214 BDE8F081 		pop	{r4, r5, r6, r7, r8, pc}
+ 879              	.LVL98:
+ 880              	.L58:
+ 881              		.loc 1 230 1 view .LVU230
+ 882              		.align	2
+ 883              	.L57:
+ 884 0218 00000000 		.word	.LANCHOR0
+ 885 021c 00000000 		.word	.LC5
+ 886 0220 04000000 		.word	.LC6
+ 887 0224 08000000 		.word	.LC7
+ 888 0228 0C000000 		.word	.LC8
+ 889 022c 10000000 		.word	.LC9
+ 890 0230 14000000 		.word	.LC10
+ 891 0234 18000000 		.word	.LC11
+ 892 0238 1C000000 		.word	.LC12
+ 893 023c 20000000 		.word	.LC13
+ 894 0240 24000000 		.word	.LC14
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s 			page 23
+
+
+ 895 0244 28000000 		.word	.LC15
+ 896 0248 2C000000 		.word	.LC16
+ 897 024c 30000000 		.word	.LC17
+ 898 0250 34000000 		.word	.LC18
+ 899 0254 38000000 		.word	.LC19
+ 900 0258 3C000000 		.word	.LC20
+ 901              		.cfi_endproc
+ 902              	.LFE80:
+ 904              		.section	.rodata.Radio_Decode_Ack.str1.4,"aMS",%progbits,1
+ 905              		.align	2
+ 906              	.LC21:
+ 907 0000 41434B00 		.ascii	"ACK\000"
+ 908              		.align	2
+ 909              	.LC22:
+ 910 0004 4200     		.ascii	"B\000"
+ 911 0006 0000     		.align	2
+ 912              	.LC23:
+ 913 0008 4100     		.ascii	"A\000"
+ 914 000a 0000     		.align	2
+ 915              	.LC24:
+ 916 000c 4C00     		.ascii	"L\000"
+ 917 000e 0000     		.align	2
+ 918              	.LC25:
+ 919 0010 4F00     		.ascii	"O\000"
+ 920 0012 0000     		.align	2
+ 921              	.LC26:
+ 922 0014 5300     		.ascii	"S\000"
+ 923              		.global	__aeabi_d2iz
+ 924 0016 0000     		.align	2
+ 925              	.LC27:
+ 926 0018 4600     		.ascii	"F\000"
+ 927              		.section	.text.Radio_Decode_Ack,"ax",%progbits
+ 928              		.align	1
+ 929              		.global	Radio_Decode_Ack
+ 930              		.syntax unified
+ 931              		.thumb
+ 932              		.thumb_func
+ 934              	Radio_Decode_Ack:
+ 935              	.LVL99:
+ 936              	.LFB81:
+ 231:Drivers/Radio/Src/Radio.c **** 
+ 232:Drivers/Radio/Src/Radio.c **** /**
+ 233:Drivers/Radio/Src/Radio.c ****  * @brief Decode ACK message from Flight Controller.
+ 234:Drivers/Radio/Src/Radio.c ****  * @param Struct The pointer of the struct.
+ 235:Drivers/Radio/Src/Radio.c ****  * @retval void
+ 236:Drivers/Radio/Src/Radio.c ****  */
+ 237:Drivers/Radio/Src/Radio.c **** void Radio_Decode_Ack(uint8_t (*StructBuffer)[COLUMNS]) {
+ 937              		.loc 1 237 57 is_stmt 1 view -0
+ 938              		.cfi_startproc
+ 939              		@ args = 0, pretend = 0, frame = 0
+ 940              		@ frame_needed = 0, uses_anonymous_args = 0
+ 941              		.loc 1 237 57 is_stmt 0 view .LVU232
+ 942 0000 2DE9F041 		push	{r4, r5, r6, r7, r8, lr}
+ 943              	.LCFI11:
+ 944              		.cfi_def_cfa_offset 24
+ 945              		.cfi_offset 4, -24
+ 946              		.cfi_offset 5, -20
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s 			page 24
+
+
+ 947              		.cfi_offset 6, -16
+ 948              		.cfi_offset 7, -12
+ 949              		.cfi_offset 8, -8
+ 950              		.cfi_offset 14, -4
+ 951 0004 0746     		mov	r7, r0
+ 238:Drivers/Radio/Src/Radio.c ****     int index = 1;
+ 952              		.loc 1 238 5 is_stmt 1 view .LVU233
+ 953              	.LVL100:
+ 239:Drivers/Radio/Src/Radio.c ****     SensorParameters_t *Parameter = &RadioHandler->Display->SystemParameters;
+ 954              		.loc 1 239 5 view .LVU234
+ 955              		.loc 1 239 50 is_stmt 0 view .LVU235
+ 956 0006 544B     		ldr	r3, .L83
+ 957 0008 1B68     		ldr	r3, [r3]
+ 958 000a D3F83C80 		ldr	r8, [r3, #60]
+ 959              	.LVL101:
+ 240:Drivers/Radio/Src/Radio.c ****     if (strcmp((const char *)&StructBuffer[0], "ACK") != 0) return;
+ 960              		.loc 1 240 5 is_stmt 1 view .LVU236
+ 961              		.loc 1 240 9 is_stmt 0 view .LVU237
+ 962 000e 5349     		ldr	r1, .L83+4
+ 963 0010 FFF7FEFF 		bl	strcmp
+ 964              	.LVL102:
+ 965              		.loc 1 240 8 view .LVU238
+ 966 0014 0028     		cmp	r0, #0
+ 967 0016 40F09D80 		bne	.L59
+ 238:Drivers/Radio/Src/Radio.c ****     int index = 1;
+ 968              		.loc 1 238 9 view .LVU239
+ 969 001a 0124     		movs	r4, #1
+ 970 001c 09E0     		b	.L61
+ 971              	.LVL103:
+ 972              	.L74:
+ 241:Drivers/Radio/Src/Radio.c ****     while (StructBuffer[index][0] != '\0') {
+ 242:Drivers/Radio/Src/Radio.c ****         if (strcmp((const char *)&StructBuffer[index], "R") == 0) {
+ 243:Drivers/Radio/Src/Radio.c ****             Parameter->Roll = atof((const char *)&StructBuffer[index + 1]);
+ 973              		.loc 1 243 13 is_stmt 1 view .LVU240
+ 974              		.loc 1 243 63 is_stmt 0 view .LVU241
+ 975 001e 681C     		adds	r0, r5, #1
+ 976              		.loc 1 243 31 view .LVU242
+ 977 0020 07EB4010 		add	r0, r7, r0, lsl #5
+ 978 0024 FFF7FEFF 		bl	atof
+ 979              	.LVL104:
+ 980 0028 FFF7FEFF 		bl	__aeabi_d2f
+ 981              	.LVL105:
+ 982              		.loc 1 243 29 view .LVU243
+ 983 002c C8F85800 		str	r0, [r8, #88]	@ float
+ 984              	.L63:
+ 244:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "P") == 0) {
+ 245:Drivers/Radio/Src/Radio.c ****             Parameter->Pitch = atof((const char *)&StructBuffer[index + 1]);
+ 246:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "Y") == 0) {
+ 247:Drivers/Radio/Src/Radio.c ****             Parameter->Yaw = atof((const char *)&StructBuffer[index + 1]);
+ 248:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "B") == 0) {
+ 249:Drivers/Radio/Src/Radio.c ****             Parameter->VBat = atof((const char *)&StructBuffer[index + 1]);
+ 250:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "A") == 0) {
+ 251:Drivers/Radio/Src/Radio.c ****             Parameter->Altitude = atof((const char *)&StructBuffer[index + 1]);
+ 252:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "L") == 0) {
+ 253:Drivers/Radio/Src/Radio.c ****             Parameter->Gps.Latitude =
+ 254:Drivers/Radio/Src/Radio.c ****                 atof((const char *)&StructBuffer[index + 1]);
+ 255:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "O") == 0) {
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s 			page 25
+
+
+ 256:Drivers/Radio/Src/Radio.c ****             Parameter->Gps.Longitude =
+ 257:Drivers/Radio/Src/Radio.c ****                 atof((const char *)&StructBuffer[index + 1]);
+ 258:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "S") == 0) {
+ 259:Drivers/Radio/Src/Radio.c ****             Parameter->Gps.Sattellites =
+ 260:Drivers/Radio/Src/Radio.c ****                 atof((const char *)&StructBuffer[index + 1]);
+ 261:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "F") == 0) {
+ 262:Drivers/Radio/Src/Radio.c ****             if (StructBuffer[index + 1][0] == '1') {
+ 263:Drivers/Radio/Src/Radio.c ****                 Parameter->Gps.Fixed = true;
+ 264:Drivers/Radio/Src/Radio.c ****             } else {
+ 265:Drivers/Radio/Src/Radio.c ****                 Parameter->Gps.Fixed = false;
+ 266:Drivers/Radio/Src/Radio.c ****             }
+ 267:Drivers/Radio/Src/Radio.c ****         }
+ 268:Drivers/Radio/Src/Radio.c ****         index += 2;
+ 985              		.loc 1 268 9 is_stmt 1 view .LVU244
+ 986              		.loc 1 268 15 is_stmt 0 view .LVU245
+ 987 0030 0234     		adds	r4, r4, #2
+ 988              	.LVL106:
+ 989              	.L61:
+ 241:Drivers/Radio/Src/Radio.c ****     while (StructBuffer[index][0] != '\0') {
+ 990              		.loc 1 241 11 is_stmt 1 view .LVU246
+ 241:Drivers/Radio/Src/Radio.c ****     while (StructBuffer[index][0] != '\0') {
+ 991              		.loc 1 241 24 is_stmt 0 view .LVU247
+ 992 0032 2546     		mov	r5, r4
+ 993 0034 6301     		lsls	r3, r4, #5
+ 994 0036 07EB4416 		add	r6, r7, r4, lsl #5
+ 241:Drivers/Radio/Src/Radio.c ****     while (StructBuffer[index][0] != '\0') {
+ 995              		.loc 1 241 31 view .LVU248
+ 996 003a FB5C     		ldrb	r3, [r7, r3]	@ zero_extendqisi2
+ 241:Drivers/Radio/Src/Radio.c ****     while (StructBuffer[index][0] != '\0') {
+ 997              		.loc 1 241 11 view .LVU249
+ 998 003c 002B     		cmp	r3, #0
+ 999 003e 00F08980 		beq	.L59
+ 242:Drivers/Radio/Src/Radio.c ****             Parameter->Roll = atof((const char *)&StructBuffer[index + 1]);
+ 1000              		.loc 1 242 9 is_stmt 1 view .LVU250
+ 242:Drivers/Radio/Src/Radio.c ****             Parameter->Roll = atof((const char *)&StructBuffer[index + 1]);
+ 1001              		.loc 1 242 13 is_stmt 0 view .LVU251
+ 1002 0042 4749     		ldr	r1, .L83+8
+ 1003 0044 3046     		mov	r0, r6
+ 1004 0046 FFF7FEFF 		bl	strcmp
+ 1005              	.LVL107:
+ 242:Drivers/Radio/Src/Radio.c ****             Parameter->Roll = atof((const char *)&StructBuffer[index + 1]);
+ 1006              		.loc 1 242 12 view .LVU252
+ 1007 004a 0028     		cmp	r0, #0
+ 1008 004c E7D0     		beq	.L74
+ 244:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "P") == 0) {
+ 1009              		.loc 1 244 16 is_stmt 1 view .LVU253
+ 244:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "P") == 0) {
+ 1010              		.loc 1 244 20 is_stmt 0 view .LVU254
+ 1011 004e 4549     		ldr	r1, .L83+12
+ 1012 0050 3046     		mov	r0, r6
+ 1013 0052 FFF7FEFF 		bl	strcmp
+ 1014              	.LVL108:
+ 244:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "P") == 0) {
+ 1015              		.loc 1 244 19 view .LVU255
+ 1016 0056 0028     		cmp	r0, #0
+ 1017 0058 32D0     		beq	.L75
+ 246:Drivers/Radio/Src/Radio.c ****             Parameter->Yaw = atof((const char *)&StructBuffer[index + 1]);
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s 			page 26
+
+
+ 1018              		.loc 1 246 16 is_stmt 1 view .LVU256
+ 246:Drivers/Radio/Src/Radio.c ****             Parameter->Yaw = atof((const char *)&StructBuffer[index + 1]);
+ 1019              		.loc 1 246 20 is_stmt 0 view .LVU257
+ 1020 005a 4349     		ldr	r1, .L83+16
+ 1021 005c 3046     		mov	r0, r6
+ 1022 005e FFF7FEFF 		bl	strcmp
+ 1023              	.LVL109:
+ 246:Drivers/Radio/Src/Radio.c ****             Parameter->Yaw = atof((const char *)&StructBuffer[index + 1]);
+ 1024              		.loc 1 246 19 view .LVU258
+ 1025 0062 0028     		cmp	r0, #0
+ 1026 0064 36D0     		beq	.L76
+ 248:Drivers/Radio/Src/Radio.c ****             Parameter->VBat = atof((const char *)&StructBuffer[index + 1]);
+ 1027              		.loc 1 248 16 is_stmt 1 view .LVU259
+ 248:Drivers/Radio/Src/Radio.c ****             Parameter->VBat = atof((const char *)&StructBuffer[index + 1]);
+ 1028              		.loc 1 248 20 is_stmt 0 view .LVU260
+ 1029 0066 4149     		ldr	r1, .L83+20
+ 1030 0068 3046     		mov	r0, r6
+ 1031 006a FFF7FEFF 		bl	strcmp
+ 1032              	.LVL110:
+ 248:Drivers/Radio/Src/Radio.c ****             Parameter->VBat = atof((const char *)&StructBuffer[index + 1]);
+ 1033              		.loc 1 248 19 view .LVU261
+ 1034 006e 0028     		cmp	r0, #0
+ 1035 0070 3AD0     		beq	.L77
+ 250:Drivers/Radio/Src/Radio.c ****             Parameter->Altitude = atof((const char *)&StructBuffer[index + 1]);
+ 1036              		.loc 1 250 16 is_stmt 1 view .LVU262
+ 250:Drivers/Radio/Src/Radio.c ****             Parameter->Altitude = atof((const char *)&StructBuffer[index + 1]);
+ 1037              		.loc 1 250 20 is_stmt 0 view .LVU263
+ 1038 0072 3F49     		ldr	r1, .L83+24
+ 1039 0074 3046     		mov	r0, r6
+ 1040 0076 FFF7FEFF 		bl	strcmp
+ 1041              	.LVL111:
+ 250:Drivers/Radio/Src/Radio.c ****             Parameter->Altitude = atof((const char *)&StructBuffer[index + 1]);
+ 1042              		.loc 1 250 19 view .LVU264
+ 1043 007a 0028     		cmp	r0, #0
+ 1044 007c 3ED0     		beq	.L78
+ 252:Drivers/Radio/Src/Radio.c ****             Parameter->Gps.Latitude =
+ 1045              		.loc 1 252 16 is_stmt 1 view .LVU265
+ 252:Drivers/Radio/Src/Radio.c ****             Parameter->Gps.Latitude =
+ 1046              		.loc 1 252 20 is_stmt 0 view .LVU266
+ 1047 007e 3D49     		ldr	r1, .L83+28
+ 1048 0080 3046     		mov	r0, r6
+ 1049 0082 FFF7FEFF 		bl	strcmp
+ 1050              	.LVL112:
+ 252:Drivers/Radio/Src/Radio.c ****             Parameter->Gps.Latitude =
+ 1051              		.loc 1 252 19 view .LVU267
+ 1052 0086 0028     		cmp	r0, #0
+ 1053 0088 42D0     		beq	.L79
+ 255:Drivers/Radio/Src/Radio.c ****             Parameter->Gps.Longitude =
+ 1054              		.loc 1 255 16 is_stmt 1 view .LVU268
+ 255:Drivers/Radio/Src/Radio.c ****             Parameter->Gps.Longitude =
+ 1055              		.loc 1 255 20 is_stmt 0 view .LVU269
+ 1056 008a 3B49     		ldr	r1, .L83+32
+ 1057 008c 3046     		mov	r0, r6
+ 1058 008e FFF7FEFF 		bl	strcmp
+ 1059              	.LVL113:
+ 255:Drivers/Radio/Src/Radio.c ****             Parameter->Gps.Longitude =
+ 1060              		.loc 1 255 19 view .LVU270
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s 			page 27
+
+
+ 1061 0092 0028     		cmp	r0, #0
+ 1062 0094 46D0     		beq	.L80
+ 258:Drivers/Radio/Src/Radio.c ****             Parameter->Gps.Sattellites =
+ 1063              		.loc 1 258 16 is_stmt 1 view .LVU271
+ 258:Drivers/Radio/Src/Radio.c ****             Parameter->Gps.Sattellites =
+ 1064              		.loc 1 258 20 is_stmt 0 view .LVU272
+ 1065 0096 3949     		ldr	r1, .L83+36
+ 1066 0098 3046     		mov	r0, r6
+ 1067 009a FFF7FEFF 		bl	strcmp
+ 1068              	.LVL114:
+ 258:Drivers/Radio/Src/Radio.c ****             Parameter->Gps.Sattellites =
+ 1069              		.loc 1 258 19 view .LVU273
+ 1070 009e 0028     		cmp	r0, #0
+ 1071 00a0 4AD0     		beq	.L81
+ 261:Drivers/Radio/Src/Radio.c ****             if (StructBuffer[index + 1][0] == '1') {
+ 1072              		.loc 1 261 16 is_stmt 1 view .LVU274
+ 261:Drivers/Radio/Src/Radio.c ****             if (StructBuffer[index + 1][0] == '1') {
+ 1073              		.loc 1 261 20 is_stmt 0 view .LVU275
+ 1074 00a2 3749     		ldr	r1, .L83+40
+ 1075 00a4 3046     		mov	r0, r6
+ 1076 00a6 FFF7FEFF 		bl	strcmp
+ 1077              	.LVL115:
+ 261:Drivers/Radio/Src/Radio.c ****             if (StructBuffer[index + 1][0] == '1') {
+ 1078              		.loc 1 261 19 view .LVU276
+ 1079 00aa 0028     		cmp	r0, #0
+ 1080 00ac C0D1     		bne	.L63
+ 262:Drivers/Radio/Src/Radio.c ****                 Parameter->Gps.Fixed = true;
+ 1081              		.loc 1 262 13 is_stmt 1 view .LVU277
+ 262:Drivers/Radio/Src/Radio.c ****                 Parameter->Gps.Fixed = true;
+ 1082              		.loc 1 262 29 is_stmt 0 view .LVU278
+ 1083 00ae 0135     		adds	r5, r5, #1
+ 1084 00b0 6D01     		lsls	r5, r5, #5
+ 262:Drivers/Radio/Src/Radio.c ****                 Parameter->Gps.Fixed = true;
+ 1085              		.loc 1 262 40 view .LVU279
+ 1086 00b2 7B5D     		ldrb	r3, [r7, r5]	@ zero_extendqisi2
+ 262:Drivers/Radio/Src/Radio.c ****                 Parameter->Gps.Fixed = true;
+ 1087              		.loc 1 262 16 view .LVU280
+ 1088 00b4 312B     		cmp	r3, #49
+ 1089 00b6 49D0     		beq	.L82
+ 265:Drivers/Radio/Src/Radio.c ****             }
+ 1090              		.loc 1 265 17 is_stmt 1 view .LVU281
+ 265:Drivers/Radio/Src/Radio.c ****             }
+ 1091              		.loc 1 265 38 is_stmt 0 view .LVU282
+ 1092 00b8 0023     		movs	r3, #0
+ 1093 00ba 88F87430 		strb	r3, [r8, #116]
+ 1094 00be B7E7     		b	.L63
+ 1095              	.L75:
+ 245:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "Y") == 0) {
+ 1096              		.loc 1 245 13 is_stmt 1 view .LVU283
+ 245:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "Y") == 0) {
+ 1097              		.loc 1 245 64 is_stmt 0 view .LVU284
+ 1098 00c0 681C     		adds	r0, r5, #1
+ 245:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "Y") == 0) {
+ 1099              		.loc 1 245 32 view .LVU285
+ 1100 00c2 07EB4010 		add	r0, r7, r0, lsl #5
+ 1101 00c6 FFF7FEFF 		bl	atof
+ 1102              	.LVL116:
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s 			page 28
+
+
+ 1103 00ca FFF7FEFF 		bl	__aeabi_d2f
+ 1104              	.LVL117:
+ 245:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "Y") == 0) {
+ 1105              		.loc 1 245 30 view .LVU286
+ 1106 00ce C8F85C00 		str	r0, [r8, #92]	@ float
+ 1107 00d2 ADE7     		b	.L63
+ 1108              	.L76:
+ 247:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "B") == 0) {
+ 1109              		.loc 1 247 13 is_stmt 1 view .LVU287
+ 247:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "B") == 0) {
+ 1110              		.loc 1 247 62 is_stmt 0 view .LVU288
+ 1111 00d4 681C     		adds	r0, r5, #1
+ 247:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "B") == 0) {
+ 1112              		.loc 1 247 30 view .LVU289
+ 1113 00d6 07EB4010 		add	r0, r7, r0, lsl #5
+ 1114 00da FFF7FEFF 		bl	atof
+ 1115              	.LVL118:
+ 1116 00de FFF7FEFF 		bl	__aeabi_d2f
+ 1117              	.LVL119:
+ 247:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "B") == 0) {
+ 1118              		.loc 1 247 28 view .LVU290
+ 1119 00e2 C8F86000 		str	r0, [r8, #96]	@ float
+ 1120 00e6 A3E7     		b	.L63
+ 1121              	.L77:
+ 249:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "A") == 0) {
+ 1122              		.loc 1 249 13 is_stmt 1 view .LVU291
+ 249:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "A") == 0) {
+ 1123              		.loc 1 249 63 is_stmt 0 view .LVU292
+ 1124 00e8 681C     		adds	r0, r5, #1
+ 249:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "A") == 0) {
+ 1125              		.loc 1 249 31 view .LVU293
+ 1126 00ea 07EB4010 		add	r0, r7, r0, lsl #5
+ 1127 00ee FFF7FEFF 		bl	atof
+ 1128              	.LVL120:
+ 1129 00f2 FFF7FEFF 		bl	__aeabi_d2f
+ 1130              	.LVL121:
+ 249:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "A") == 0) {
+ 1131              		.loc 1 249 29 view .LVU294
+ 1132 00f6 C8F86400 		str	r0, [r8, #100]	@ float
+ 1133 00fa 99E7     		b	.L63
+ 1134              	.L78:
+ 251:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "L") == 0) {
+ 1135              		.loc 1 251 13 is_stmt 1 view .LVU295
+ 251:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "L") == 0) {
+ 1136              		.loc 1 251 67 is_stmt 0 view .LVU296
+ 1137 00fc 681C     		adds	r0, r5, #1
+ 251:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "L") == 0) {
+ 1138              		.loc 1 251 35 view .LVU297
+ 1139 00fe 07EB4010 		add	r0, r7, r0, lsl #5
+ 1140 0102 FFF7FEFF 		bl	atof
+ 1141              	.LVL122:
+ 1142 0106 FFF7FEFF 		bl	__aeabi_d2f
+ 1143              	.LVL123:
+ 251:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "L") == 0) {
+ 1144              		.loc 1 251 33 view .LVU298
+ 1145 010a C8F86800 		str	r0, [r8, #104]	@ float
+ 1146 010e 8FE7     		b	.L63
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s 			page 29
+
+
+ 1147              	.L79:
+ 253:Drivers/Radio/Src/Radio.c ****                 atof((const char *)&StructBuffer[index + 1]);
+ 1148              		.loc 1 253 13 is_stmt 1 view .LVU299
+ 254:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "O") == 0) {
+ 1149              		.loc 1 254 49 is_stmt 0 view .LVU300
+ 1150 0110 681C     		adds	r0, r5, #1
+ 254:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "O") == 0) {
+ 1151              		.loc 1 254 17 view .LVU301
+ 1152 0112 07EB4010 		add	r0, r7, r0, lsl #5
+ 1153 0116 FFF7FEFF 		bl	atof
+ 1154              	.LVL124:
+ 1155 011a FFF7FEFF 		bl	__aeabi_d2f
+ 1156              	.LVL125:
+ 253:Drivers/Radio/Src/Radio.c ****                 atof((const char *)&StructBuffer[index + 1]);
+ 1157              		.loc 1 253 37 view .LVU302
+ 1158 011e C8F87000 		str	r0, [r8, #112]	@ float
+ 1159 0122 85E7     		b	.L63
+ 1160              	.L80:
+ 256:Drivers/Radio/Src/Radio.c ****                 atof((const char *)&StructBuffer[index + 1]);
+ 1161              		.loc 1 256 13 is_stmt 1 view .LVU303
+ 257:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "S") == 0) {
+ 1162              		.loc 1 257 49 is_stmt 0 view .LVU304
+ 1163 0124 681C     		adds	r0, r5, #1
+ 257:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "S") == 0) {
+ 1164              		.loc 1 257 17 view .LVU305
+ 1165 0126 07EB4010 		add	r0, r7, r0, lsl #5
+ 1166 012a FFF7FEFF 		bl	atof
+ 1167              	.LVL126:
+ 1168 012e FFF7FEFF 		bl	__aeabi_d2f
+ 1169              	.LVL127:
+ 256:Drivers/Radio/Src/Radio.c ****                 atof((const char *)&StructBuffer[index + 1]);
+ 1170              		.loc 1 256 38 view .LVU306
+ 1171 0132 C8F86C00 		str	r0, [r8, #108]	@ float
+ 1172 0136 7BE7     		b	.L63
+ 1173              	.L81:
+ 259:Drivers/Radio/Src/Radio.c ****                 atof((const char *)&StructBuffer[index + 1]);
+ 1174              		.loc 1 259 13 is_stmt 1 view .LVU307
+ 260:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "F") == 0) {
+ 1175              		.loc 1 260 49 is_stmt 0 view .LVU308
+ 1176 0138 681C     		adds	r0, r5, #1
+ 260:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&StructBuffer[index], "F") == 0) {
+ 1177              		.loc 1 260 17 view .LVU309
+ 1178 013a 07EB4010 		add	r0, r7, r0, lsl #5
+ 1179 013e FFF7FEFF 		bl	atof
+ 1180              	.LVL128:
+ 259:Drivers/Radio/Src/Radio.c ****                 atof((const char *)&StructBuffer[index + 1]);
+ 1181              		.loc 1 259 40 view .LVU310
+ 1182 0142 FFF7FEFF 		bl	__aeabi_d2iz
+ 1183              	.LVL129:
+ 1184 0146 C8F87C00 		str	r0, [r8, #124]
+ 1185 014a 71E7     		b	.L63
+ 1186              	.L82:
+ 263:Drivers/Radio/Src/Radio.c ****             } else {
+ 1187              		.loc 1 263 17 is_stmt 1 view .LVU311
+ 263:Drivers/Radio/Src/Radio.c ****             } else {
+ 1188              		.loc 1 263 38 is_stmt 0 view .LVU312
+ 1189 014c 0123     		movs	r3, #1
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s 			page 30
+
+
+ 1190 014e 88F87430 		strb	r3, [r8, #116]
+ 1191 0152 6DE7     		b	.L63
+ 1192              	.LVL130:
+ 1193              	.L59:
+ 269:Drivers/Radio/Src/Radio.c ****     }
+ 270:Drivers/Radio/Src/Radio.c **** }
+ 1194              		.loc 1 270 1 view .LVU313
+ 1195 0154 BDE8F081 		pop	{r4, r5, r6, r7, r8, pc}
+ 1196              	.LVL131:
+ 1197              	.L84:
+ 1198              		.loc 1 270 1 view .LVU314
+ 1199              		.align	2
+ 1200              	.L83:
+ 1201 0158 00000000 		.word	.LANCHOR0
+ 1202 015c 00000000 		.word	.LC21
+ 1203 0160 08000000 		.word	.LC2
+ 1204 0164 0C000000 		.word	.LC3
+ 1205 0168 10000000 		.word	.LC4
+ 1206 016c 04000000 		.word	.LC22
+ 1207 0170 08000000 		.word	.LC23
+ 1208 0174 0C000000 		.word	.LC24
+ 1209 0178 10000000 		.word	.LC25
+ 1210 017c 14000000 		.word	.LC26
+ 1211 0180 18000000 		.word	.LC27
+ 1212              		.cfi_endproc
+ 1213              	.LFE81:
+ 1215              		.section	.rodata.Radio_Decode_Mode.str1.4,"aMS",%progbits,1
+ 1216              		.align	2
+ 1217              	.LC28:
+ 1218 0000 4D4F4400 		.ascii	"MOD\000"
+ 1219              		.section	.text.Radio_Decode_Mode,"ax",%progbits
+ 1220              		.align	1
+ 1221              		.global	Radio_Decode_Mode
+ 1222              		.syntax unified
+ 1223              		.thumb
+ 1224              		.thumb_func
+ 1226              	Radio_Decode_Mode:
+ 1227              	.LVL132:
+ 1228              	.LFB82:
+ 271:Drivers/Radio/Src/Radio.c **** 
+ 272:Drivers/Radio/Src/Radio.c **** /**
+ 273:Drivers/Radio/Src/Radio.c ****  * @brief Decode Mode from the Flight Controller.
+ 274:Drivers/Radio/Src/Radio.c ****  * @param Struct The pointer of the struct.
+ 275:Drivers/Radio/Src/Radio.c ****  * @retval void
+ 276:Drivers/Radio/Src/Radio.c ****  */
+ 277:Drivers/Radio/Src/Radio.c **** void Radio_Decode_Mode(uint8_t (*StructBuffer)[COLUMNS]) {
+ 1229              		.loc 1 277 58 is_stmt 1 view -0
+ 1230              		.cfi_startproc
+ 1231              		@ args = 0, pretend = 0, frame = 0
+ 1232              		@ frame_needed = 0, uses_anonymous_args = 0
+ 1233              		.loc 1 277 58 is_stmt 0 view .LVU316
+ 1234 0000 38B5     		push	{r3, r4, r5, lr}
+ 1235              	.LCFI12:
+ 1236              		.cfi_def_cfa_offset 16
+ 1237              		.cfi_offset 3, -16
+ 1238              		.cfi_offset 4, -12
+ 1239              		.cfi_offset 5, -8
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s 			page 31
+
+
+ 1240              		.cfi_offset 14, -4
+ 1241 0002 0446     		mov	r4, r0
+ 278:Drivers/Radio/Src/Radio.c ****     OLEDDisplay_t *dis = RadioHandler->Display;
+ 1242              		.loc 1 278 5 is_stmt 1 view .LVU317
+ 1243              		.loc 1 278 38 is_stmt 0 view .LVU318
+ 1244 0004 064B     		ldr	r3, .L89
+ 1245 0006 1B68     		ldr	r3, [r3]
+ 1246              		.loc 1 278 20 view .LVU319
+ 1247 0008 DD6B     		ldr	r5, [r3, #60]
+ 1248              	.LVL133:
+ 279:Drivers/Radio/Src/Radio.c ****     if (strcmp((const char *)&StructBuffer[0], "MOD") != 0) return;
+ 1249              		.loc 1 279 5 is_stmt 1 view .LVU320
+ 1250              		.loc 1 279 9 is_stmt 0 view .LVU321
+ 1251 000a 0649     		ldr	r1, .L89+4
+ 1252 000c FFF7FEFF 		bl	strcmp
+ 1253              	.LVL134:
+ 1254              		.loc 1 279 8 view .LVU322
+ 1255 0010 00B1     		cbz	r0, .L88
+ 1256              	.L85:
+ 280:Drivers/Radio/Src/Radio.c ****     strcpy(dis->Mode, (const char *)&StructBuffer[1]);
+ 281:Drivers/Radio/Src/Radio.c **** }
+ 1257              		.loc 1 281 1 view .LVU323
+ 1258 0012 38BD     		pop	{r3, r4, r5, pc}
+ 1259              	.LVL135:
+ 1260              	.L88:
+ 280:Drivers/Radio/Src/Radio.c ****     strcpy(dis->Mode, (const char *)&StructBuffer[1]);
+ 1261              		.loc 1 280 5 is_stmt 1 view .LVU324
+ 1262 0014 04F12001 		add	r1, r4, #32
+ 1263 0018 2846     		mov	r0, r5
+ 1264 001a FFF7FEFF 		bl	strcpy
+ 1265              	.LVL136:
+ 1266 001e F8E7     		b	.L85
+ 1267              	.L90:
+ 1268              		.align	2
+ 1269              	.L89:
+ 1270 0020 00000000 		.word	.LANCHOR0
+ 1271 0024 00000000 		.word	.LC28
+ 1272              		.cfi_endproc
+ 1273              	.LFE82:
+ 1275              		.section	.text.Radio_Process_From_FC,"ax",%progbits
+ 1276              		.align	1
+ 1277              		.global	Radio_Process_From_FC
+ 1278              		.syntax unified
+ 1279              		.thumb
+ 1280              		.thumb_func
+ 1282              	Radio_Process_From_FC:
+ 1283              	.LVL137:
+ 1284              	.LFB77:
+ 123:Drivers/Radio/Src/Radio.c ****     if (RadioHandler->enableDebug == true) {
+ 1285              		.loc 1 123 45 view -0
+ 1286              		.cfi_startproc
+ 1287              		@ args = 0, pretend = 0, frame = 1024
+ 1288              		@ frame_needed = 0, uses_anonymous_args = 0
+ 123:Drivers/Radio/Src/Radio.c ****     if (RadioHandler->enableDebug == true) {
+ 1289              		.loc 1 123 45 is_stmt 0 view .LVU326
+ 1290 0000 30B5     		push	{r4, r5, lr}
+ 1291              	.LCFI13:
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s 			page 32
+
+
+ 1292              		.cfi_def_cfa_offset 12
+ 1293              		.cfi_offset 4, -12
+ 1294              		.cfi_offset 5, -8
+ 1295              		.cfi_offset 14, -4
+ 1296 0002 ADF2044D 		subw	sp, sp, #1028
+ 1297              	.LCFI14:
+ 1298              		.cfi_def_cfa_offset 1040
+ 1299 0006 0446     		mov	r4, r0
+ 124:Drivers/Radio/Src/Radio.c ****         HAL_UART_Transmit(RadioHandler->Debug->huart, Buffer,
+ 1300              		.loc 1 124 5 is_stmt 1 view .LVU327
+ 124:Drivers/Radio/Src/Radio.c ****         HAL_UART_Transmit(RadioHandler->Debug->huart, Buffer,
+ 1301              		.loc 1 124 21 is_stmt 0 view .LVU328
+ 1302 0008 194B     		ldr	r3, .L100
+ 1303 000a 1B68     		ldr	r3, [r3]
+ 1304 000c 93F83820 		ldrb	r2, [r3, #56]	@ zero_extendqisi2
+ 124:Drivers/Radio/Src/Radio.c ****         HAL_UART_Transmit(RadioHandler->Debug->huart, Buffer,
+ 1305              		.loc 1 124 8 view .LVU329
+ 1306 0010 62B9     		cbnz	r2, .L97
+ 1307              	.LVL138:
+ 1308              	.L92:
+ 128:Drivers/Radio/Src/Radio.c ****         uint8_t Struct[ROWS][COLUMNS];
+ 1309              		.loc 1 128 5 is_stmt 1 view .LVU330
+ 128:Drivers/Radio/Src/Radio.c ****         uint8_t Struct[ROWS][COLUMNS];
+ 1310              		.loc 1 128 9 is_stmt 0 view .LVU331
+ 1311 0012 2046     		mov	r0, r4
+ 1312 0014 FFF7FEFF 		bl	strlen
+ 1313              	.LVL139:
+ 1314 0018 0246     		mov	r2, r0
+ 1315 001a 0A21     		movs	r1, #10
+ 1316 001c 2046     		mov	r0, r4
+ 1317 001e FFF7FEFF 		bl	IndexOf
+ 1318              	.LVL140:
+ 128:Drivers/Radio/Src/Radio.c ****         uint8_t Struct[ROWS][COLUMNS];
+ 1319              		.loc 1 128 8 view .LVU332
+ 1320 0022 0028     		cmp	r0, #0
+ 1321 0024 0CDC     		bgt	.L98
+ 1322              	.L91:
+ 138:Drivers/Radio/Src/Radio.c **** 
+ 1323              		.loc 1 138 1 view .LVU333
+ 1324 0026 0DF2044D 		addw	sp, sp, #1028
+ 1325              	.LCFI15:
+ 1326              		.cfi_remember_state
+ 1327              		.cfi_def_cfa_offset 12
+ 1328              		@ sp needed
+ 1329 002a 30BD     		pop	{r4, r5, pc}
+ 1330              	.LVL141:
+ 1331              	.L97:
+ 1332              	.LCFI16:
+ 1333              		.cfi_restore_state
+ 125:Drivers/Radio/Src/Radio.c ****                           strlen((char *)Buffer), 100);
+ 1334              		.loc 1 125 9 is_stmt 1 view .LVU334
+ 125:Drivers/Radio/Src/Radio.c ****                           strlen((char *)Buffer), 100);
+ 1335              		.loc 1 125 39 is_stmt 0 view .LVU335
+ 1336 002c 5D6B     		ldr	r5, [r3, #52]
+ 126:Drivers/Radio/Src/Radio.c ****     }
+ 1337              		.loc 1 126 27 view .LVU336
+ 1338 002e FFF7FEFF 		bl	strlen
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s 			page 33
+
+
+ 1339              	.LVL142:
+ 125:Drivers/Radio/Src/Radio.c ****                           strlen((char *)Buffer), 100);
+ 1340              		.loc 1 125 9 view .LVU337
+ 1341 0032 6423     		movs	r3, #100
+ 1342 0034 82B2     		uxth	r2, r0
+ 1343 0036 2146     		mov	r1, r4
+ 1344 0038 6868     		ldr	r0, [r5, #4]
+ 1345 003a FFF7FEFF 		bl	HAL_UART_Transmit
+ 1346              	.LVL143:
+ 1347 003e E8E7     		b	.L92
+ 1348              	.L98:
+ 1349              	.LBB2:
+ 129:Drivers/Radio/Src/Radio.c ****         // Put the process with the Parse string function
+ 1350              		.loc 1 129 9 is_stmt 1 view .LVU338
+ 131:Drivers/Radio/Src/Radio.c ****         if (strcmp((const char *)&Struct[0], "MOD") == 0) {
+ 1351              		.loc 1 131 9 view .LVU339
+ 1352 0040 2C22     		movs	r2, #44
+ 1353 0042 2146     		mov	r1, r4
+ 1354 0044 6846     		mov	r0, sp
+ 1355 0046 FFF7FEFF 		bl	Radio_Control_Parse
+ 1356              	.LVL144:
+ 132:Drivers/Radio/Src/Radio.c ****             Radio_Decode_Mode(Struct);
+ 1357              		.loc 1 132 9 view .LVU340
+ 132:Drivers/Radio/Src/Radio.c ****             Radio_Decode_Mode(Struct);
+ 1358              		.loc 1 132 13 is_stmt 0 view .LVU341
+ 1359 004a 0A49     		ldr	r1, .L100+4
+ 1360 004c 6846     		mov	r0, sp
+ 1361 004e FFF7FEFF 		bl	strcmp
+ 1362              	.LVL145:
+ 132:Drivers/Radio/Src/Radio.c ****             Radio_Decode_Mode(Struct);
+ 1363              		.loc 1 132 12 view .LVU342
+ 1364 0052 48B1     		cbz	r0, .L99
+ 134:Drivers/Radio/Src/Radio.c ****             Radio_Decode_Ack(Struct);
+ 1365              		.loc 1 134 16 is_stmt 1 view .LVU343
+ 134:Drivers/Radio/Src/Radio.c ****             Radio_Decode_Ack(Struct);
+ 1366              		.loc 1 134 20 is_stmt 0 view .LVU344
+ 1367 0054 0849     		ldr	r1, .L100+8
+ 1368 0056 6846     		mov	r0, sp
+ 1369 0058 FFF7FEFF 		bl	strcmp
+ 1370              	.LVL146:
+ 134:Drivers/Radio/Src/Radio.c ****             Radio_Decode_Ack(Struct);
+ 1371              		.loc 1 134 19 view .LVU345
+ 1372 005c 0028     		cmp	r0, #0
+ 1373 005e E2D1     		bne	.L91
+ 135:Drivers/Radio/Src/Radio.c ****         }
+ 1374              		.loc 1 135 13 is_stmt 1 view .LVU346
+ 1375 0060 6846     		mov	r0, sp
+ 1376 0062 FFF7FEFF 		bl	Radio_Decode_Ack
+ 1377              	.LVL147:
+ 1378              	.LBE2:
+ 138:Drivers/Radio/Src/Radio.c **** 
+ 1379              		.loc 1 138 1 is_stmt 0 view .LVU347
+ 1380 0066 DEE7     		b	.L91
+ 1381              	.L99:
+ 1382              	.LBB3:
+ 133:Drivers/Radio/Src/Radio.c ****         } else if (strcmp((const char *)&Struct[0], "ACK") == 0) {
+ 1383              		.loc 1 133 13 is_stmt 1 view .LVU348
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s 			page 34
+
+
+ 1384 0068 6846     		mov	r0, sp
+ 1385 006a FFF7FEFF 		bl	Radio_Decode_Mode
+ 1386              	.LVL148:
+ 1387 006e DAE7     		b	.L91
+ 1388              	.L101:
+ 1389              		.align	2
+ 1390              	.L100:
+ 1391 0070 00000000 		.word	.LANCHOR0
+ 1392 0074 00000000 		.word	.LC28
+ 1393 0078 00000000 		.word	.LC21
+ 1394              	.LBE3:
+ 1395              		.cfi_endproc
+ 1396              	.LFE77:
+ 1398              		.section	.text.Radio_Put_String,"ax",%progbits
+ 1399              		.align	1
+ 1400              		.global	Radio_Put_String
+ 1401              		.syntax unified
+ 1402              		.thumb
+ 1403              		.thumb_func
+ 1405              	Radio_Put_String:
+ 1406              	.LVL149:
+ 1407              	.LFB83:
+ 282:Drivers/Radio/Src/Radio.c **** 
+ 283:Drivers/Radio/Src/Radio.c **** // Function For Circular Buffer
+ 284:Drivers/Radio/Src/Radio.c **** /**
+ 285:Drivers/Radio/Src/Radio.c ****  * @brief Put the string into the circular buffer.
+ 286:Drivers/Radio/Src/Radio.c ****  * @param Buffer The pointer of the string.
+ 287:Drivers/Radio/Src/Radio.c ****  * @return int Number of bytes remaining in the buffer. Return -1 means the size
+ 288:Drivers/Radio/Src/Radio.c ****  * of the buffer doesn't enough.
+ 289:Drivers/Radio/Src/Radio.c ****  */
+ 290:Drivers/Radio/Src/Radio.c **** int Radio_Put_String(char *Buffer) {
+ 1408              		.loc 1 290 36 view -0
+ 1409              		.cfi_startproc
+ 1410              		@ args = 0, pretend = 0, frame = 0
+ 1411              		@ frame_needed = 0, uses_anonymous_args = 0
+ 1412              		.loc 1 290 36 is_stmt 0 view .LVU350
+ 1413 0000 2DE9F843 		push	{r3, r4, r5, r6, r7, r8, r9, lr}
+ 1414              	.LCFI17:
+ 1415              		.cfi_def_cfa_offset 32
+ 1416              		.cfi_offset 3, -32
+ 1417              		.cfi_offset 4, -28
+ 1418              		.cfi_offset 5, -24
+ 1419              		.cfi_offset 6, -20
+ 1420              		.cfi_offset 7, -16
+ 1421              		.cfi_offset 8, -12
+ 1422              		.cfi_offset 9, -8
+ 1423              		.cfi_offset 14, -4
+ 1424 0004 0546     		mov	r5, r0
+ 291:Drivers/Radio/Src/Radio.c ****     uint16_t StringLength = strlen(Buffer);
+ 1425              		.loc 1 291 5 is_stmt 1 view .LVU351
+ 1426              		.loc 1 291 29 is_stmt 0 view .LVU352
+ 1427 0006 FFF7FEFF 		bl	strlen
+ 1428              	.LVL150:
+ 1429              		.loc 1 291 14 view .LVU353
+ 1430 000a 81B2     		uxth	r1, r0
+ 1431              	.LVL151:
+ 292:Drivers/Radio/Src/Radio.c ****     uint16_t Head = RadioHandler->Head;
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s 			page 35
+
+
+ 1432              		.loc 1 292 5 is_stmt 1 view .LVU354
+ 1433              		.loc 1 292 33 is_stmt 0 view .LVU355
+ 1434 000c 254B     		ldr	r3, .L112
+ 1435 000e 1A68     		ldr	r2, [r3]
+ 1436 0010 536D     		ldr	r3, [r2, #84]
+ 1437              	.LVL152:
+ 293:Drivers/Radio/Src/Radio.c ****     uint16_t Tail = RadioHandler->Tail;
+ 1438              		.loc 1 293 5 is_stmt 1 view .LVU356
+ 1439              		.loc 1 293 33 is_stmt 0 view .LVU357
+ 1440 0012 966D     		ldr	r6, [r2, #88]
+ 1441              	.LVL153:
+ 294:Drivers/Radio/Src/Radio.c ****     // Check the size of the message
+ 295:Drivers/Radio/Src/Radio.c ****     if (StringLength > RADIO_CIRCULAR_BUFFER_SIZE) {
+ 1442              		.loc 1 295 5 is_stmt 1 view .LVU358
+ 1443              		.loc 1 295 8 is_stmt 0 view .LVU359
+ 1444 0014 8029     		cmp	r1, #128
+ 1445 0016 41D8     		bhi	.L108
+ 1446 0018 9FB2     		uxth	r7, r3
+ 296:Drivers/Radio/Src/Radio.c ****         return -1;
+ 297:Drivers/Radio/Src/Radio.c ****     }
+ 298:Drivers/Radio/Src/Radio.c ****     // Calculate remaining size
+ 299:Drivers/Radio/Src/Radio.c ****     int Remain = Tail - Head;
+ 1447              		.loc 1 299 5 is_stmt 1 view .LVU360
+ 1448 001a 3B46     		mov	r3, r7
+ 1449              		.loc 1 299 9 is_stmt 0 view .LVU361
+ 1450 001c B6B2     		uxth	r6, r6
+ 1451              		.loc 1 299 9 view .LVU362
+ 1452 001e F61B     		subs	r6, r6, r7
+ 1453              	.LVL154:
+ 300:Drivers/Radio/Src/Radio.c ****     if (Remain <= 0) {
+ 1454              		.loc 1 300 5 is_stmt 1 view .LVU363
+ 1455              		.loc 1 300 8 is_stmt 0 view .LVU364
+ 1456 0020 002E     		cmp	r6, #0
+ 1457 0022 2ADD     		ble	.L110
+ 1458              	.L104:
+ 301:Drivers/Radio/Src/Radio.c ****         Remain += RADIO_CIRCULAR_BUFFER_SIZE;
+ 302:Drivers/Radio/Src/Radio.c ****     }
+ 303:Drivers/Radio/Src/Radio.c ****     // Check whether the messsage exceeds the remaining size.
+ 304:Drivers/Radio/Src/Radio.c ****     if (Head + StringLength > RADIO_CIRCULAR_BUFFER_SIZE) {
+ 1459              		.loc 1 304 5 is_stmt 1 view .LVU365
+ 1460 0024 84B2     		uxth	r4, r0
+ 1461              		.loc 1 304 14 is_stmt 0 view .LVU366
+ 1462 0026 E118     		adds	r1, r4, r3
+ 1463              	.LVL155:
+ 1464              		.loc 1 304 8 view .LVU367
+ 1465 0028 8029     		cmp	r1, #128
+ 1466 002a 28DD     		ble	.L105
+ 1467              	.LBB4:
+ 305:Drivers/Radio/Src/Radio.c ****         uint16_t DataToCopy = RADIO_CIRCULAR_BUFFER_SIZE - Head;
+ 1468              		.loc 1 305 9 is_stmt 1 view .LVU368
+ 1469              		.loc 1 305 18 is_stmt 0 view .LVU369
+ 1470 002c C7F18007 		rsb	r7, r7, #128
+ 1471 0030 BFB2     		uxth	r7, r7
+ 1472              	.LVL156:
+ 306:Drivers/Radio/Src/Radio.c ****         memcpy((RadioHandler->Buffer + Head), Buffer, DataToCopy);
+ 1473              		.loc 1 306 9 is_stmt 1 view .LVU370
+ 1474              		.loc 1 306 17 is_stmt 0 view .LVU371
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s 			page 36
+
+
+ 1475 0032 02F15C00 		add	r0, r2, #92
+ 1476              	.LVL157:
+ 1477              		.loc 1 306 9 view .LVU372
+ 1478 0036 3A46     		mov	r2, r7
+ 1479              	.LVL158:
+ 1480              		.loc 1 306 9 view .LVU373
+ 1481 0038 2946     		mov	r1, r5
+ 1482 003a 1844     		add	r0, r0, r3
+ 1483 003c FFF7FEFF 		bl	memcpy
+ 1484              	.LVL159:
+ 307:Drivers/Radio/Src/Radio.c ****         Head = 0;
+ 1485              		.loc 1 307 9 is_stmt 1 view .LVU374
+ 308:Drivers/Radio/Src/Radio.c ****         memcpy(RadioHandler->Buffer, (Buffer + DataToCopy),
+ 1486              		.loc 1 308 9 view .LVU375
+ 1487              		.loc 1 308 28 is_stmt 0 view .LVU376
+ 1488 0040 184B     		ldr	r3, .L112
+ 1489 0042 D3F80080 		ldr	r8, [r3]
+ 309:Drivers/Radio/Src/Radio.c ****                StringLength - DataToCopy);
+ 1490              		.loc 1 309 29 view .LVU377
+ 1491 0046 A4EB0709 		sub	r9, r4, r7
+ 308:Drivers/Radio/Src/Radio.c ****         memcpy(RadioHandler->Buffer, (Buffer + DataToCopy),
+ 1492              		.loc 1 308 9 view .LVU378
+ 1493 004a 4A46     		mov	r2, r9
+ 1494 004c E919     		adds	r1, r5, r7
+ 1495 004e 08F15C00 		add	r0, r8, #92
+ 1496 0052 FFF7FEFF 		bl	memcpy
+ 1497              	.LVL160:
+ 310:Drivers/Radio/Src/Radio.c ****         RadioHandler->Head = StringLength - DataToCopy;
+ 1498              		.loc 1 310 9 is_stmt 1 view .LVU379
+ 1499              		.loc 1 310 28 is_stmt 0 view .LVU380
+ 1500 0056 C8F85490 		str	r9, [r8, #84]
+ 1501              	.LVL161:
+ 1502              	.L106:
+ 1503              		.loc 1 310 28 view .LVU381
+ 1504              	.LBE4:
+ 311:Drivers/Radio/Src/Radio.c ****     } else {
+ 312:Drivers/Radio/Src/Radio.c ****         memcpy((RadioHandler->Buffer + Head), Buffer, StringLength);
+ 313:Drivers/Radio/Src/Radio.c ****         RadioHandler->Head += StringLength;
+ 314:Drivers/Radio/Src/Radio.c ****     }
+ 315:Drivers/Radio/Src/Radio.c ****     if (StringLength >= Remain) {
+ 1505              		.loc 1 315 5 is_stmt 1 view .LVU382
+ 1506              		.loc 1 315 8 is_stmt 0 view .LVU383
+ 1507 005a B442     		cmp	r4, r6
+ 1508 005c 04DB     		blt	.L107
+ 316:Drivers/Radio/Src/Radio.c ****         RadioHandler->Tail = RadioHandler->Head + 1;
+ 1509              		.loc 1 316 9 is_stmt 1 view .LVU384
+ 1510              		.loc 1 316 42 is_stmt 0 view .LVU385
+ 1511 005e 114B     		ldr	r3, .L112
+ 1512 0060 1A68     		ldr	r2, [r3]
+ 1513 0062 536D     		ldr	r3, [r2, #84]
+ 1514              		.loc 1 316 49 view .LVU386
+ 1515 0064 0133     		adds	r3, r3, #1
+ 1516              		.loc 1 316 28 view .LVU387
+ 1517 0066 9365     		str	r3, [r2, #88]
+ 1518              	.L107:
+ 317:Drivers/Radio/Src/Radio.c ****     }
+ 318:Drivers/Radio/Src/Radio.c ****     // Calculate remaining again
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s 			page 37
+
+
+ 319:Drivers/Radio/Src/Radio.c ****     Remain = RadioHandler->Tail - RadioHandler->Head;
+ 1519              		.loc 1 319 5 is_stmt 1 view .LVU388
+ 1520              		.loc 1 319 26 is_stmt 0 view .LVU389
+ 1521 0068 0E4B     		ldr	r3, .L112
+ 1522 006a 1B68     		ldr	r3, [r3]
+ 1523 006c 986D     		ldr	r0, [r3, #88]
+ 1524              		.loc 1 319 47 view .LVU390
+ 1525 006e 5B6D     		ldr	r3, [r3, #84]
+ 1526              		.loc 1 319 12 view .LVU391
+ 1527 0070 C01A     		subs	r0, r0, r3
+ 1528              	.LVL162:
+ 320:Drivers/Radio/Src/Radio.c ****     if (Remain <= 0) {
+ 1529              		.loc 1 320 5 is_stmt 1 view .LVU392
+ 1530              		.loc 1 320 8 is_stmt 0 view .LVU393
+ 1531 0072 0028     		cmp	r0, #0
+ 1532 0074 10DD     		ble	.L111
+ 1533              	.LVL163:
+ 1534              	.L102:
+ 321:Drivers/Radio/Src/Radio.c ****         Remain += RADIO_CIRCULAR_BUFFER_SIZE;
+ 322:Drivers/Radio/Src/Radio.c ****     }
+ 323:Drivers/Radio/Src/Radio.c ****     return Remain;
+ 324:Drivers/Radio/Src/Radio.c **** }
+ 1535              		.loc 1 324 1 view .LVU394
+ 1536 0076 BDE8F883 		pop	{r3, r4, r5, r6, r7, r8, r9, pc}
+ 1537              	.LVL164:
+ 1538              	.L110:
+ 301:Drivers/Radio/Src/Radio.c ****     }
+ 1539              		.loc 1 301 9 is_stmt 1 view .LVU395
+ 301:Drivers/Radio/Src/Radio.c ****     }
+ 1540              		.loc 1 301 16 is_stmt 0 view .LVU396
+ 1541 007a 8036     		adds	r6, r6, #128
+ 1542              	.LVL165:
+ 301:Drivers/Radio/Src/Radio.c ****     }
+ 1543              		.loc 1 301 16 view .LVU397
+ 1544 007c D2E7     		b	.L104
+ 1545              	.LVL166:
+ 1546              	.L105:
+ 312:Drivers/Radio/Src/Radio.c ****         RadioHandler->Head += StringLength;
+ 1547              		.loc 1 312 9 is_stmt 1 view .LVU398
+ 312:Drivers/Radio/Src/Radio.c ****         RadioHandler->Head += StringLength;
+ 1548              		.loc 1 312 17 is_stmt 0 view .LVU399
+ 1549 007e 02F15C00 		add	r0, r2, #92
+ 1550              	.LVL167:
+ 312:Drivers/Radio/Src/Radio.c ****         RadioHandler->Head += StringLength;
+ 1551              		.loc 1 312 9 view .LVU400
+ 1552 0082 2246     		mov	r2, r4
+ 1553              	.LVL168:
+ 312:Drivers/Radio/Src/Radio.c ****         RadioHandler->Head += StringLength;
+ 1554              		.loc 1 312 9 view .LVU401
+ 1555 0084 2946     		mov	r1, r5
+ 1556 0086 1844     		add	r0, r0, r3
+ 1557 0088 FFF7FEFF 		bl	memcpy
+ 1558              	.LVL169:
+ 313:Drivers/Radio/Src/Radio.c ****     }
+ 1559              		.loc 1 313 9 is_stmt 1 view .LVU402
+ 313:Drivers/Radio/Src/Radio.c ****     }
+ 1560              		.loc 1 313 28 is_stmt 0 view .LVU403
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s 			page 38
+
+
+ 1561 008c 054B     		ldr	r3, .L112
+ 1562 008e 1A68     		ldr	r2, [r3]
+ 1563 0090 536D     		ldr	r3, [r2, #84]
+ 1564 0092 2344     		add	r3, r3, r4
+ 1565 0094 5365     		str	r3, [r2, #84]
+ 1566 0096 E0E7     		b	.L106
+ 1567              	.LVL170:
+ 1568              	.L111:
+ 321:Drivers/Radio/Src/Radio.c ****     }
+ 1569              		.loc 1 321 9 is_stmt 1 view .LVU404
+ 321:Drivers/Radio/Src/Radio.c ****     }
+ 1570              		.loc 1 321 16 is_stmt 0 view .LVU405
+ 1571 0098 8030     		adds	r0, r0, #128
+ 1572              	.LVL171:
+ 321:Drivers/Radio/Src/Radio.c ****     }
+ 1573              		.loc 1 321 16 view .LVU406
+ 1574 009a ECE7     		b	.L102
+ 1575              	.LVL172:
+ 1576              	.L108:
+ 296:Drivers/Radio/Src/Radio.c ****     }
+ 1577              		.loc 1 296 16 view .LVU407
+ 1578 009c 4FF0FF30 		mov	r0, #-1
+ 1579 00a0 E9E7     		b	.L102
+ 1580              	.L113:
+ 1581 00a2 00BF     		.align	2
+ 1582              	.L112:
+ 1583 00a4 00000000 		.word	.LANCHOR0
+ 1584              		.cfi_endproc
+ 1585              	.LFE83:
+ 1587              		.section	.text.Radio_Remain,"ax",%progbits
+ 1588              		.align	1
+ 1589              		.global	Radio_Remain
+ 1590              		.syntax unified
+ 1591              		.thumb
+ 1592              		.thumb_func
+ 1594              	Radio_Remain:
+ 1595              	.LFB85:
+ 325:Drivers/Radio/Src/Radio.c **** 
+ 326:Drivers/Radio/Src/Radio.c **** /**
+ 327:Drivers/Radio/Src/Radio.c ****  * @brief Get the string from the buffer with particular size.
+ 328:Drivers/Radio/Src/Radio.c ****  * @param Buffer The pointer of the Buffer.
+ 329:Drivers/Radio/Src/Radio.c ****  * @param Size The size needs to read.
+ 330:Drivers/Radio/Src/Radio.c ****  * @return int The size of the string was read.
+ 331:Drivers/Radio/Src/Radio.c ****  */
+ 332:Drivers/Radio/Src/Radio.c **** int Radio_Get_String(uint8_t *Buffer, int Size) {
+ 333:Drivers/Radio/Src/Radio.c ****     int Available = Radio_available();
+ 334:Drivers/Radio/Src/Radio.c ****     if(Available > Size)
+ 335:Drivers/Radio/Src/Radio.c ****         Available = Size;
+ 336:Drivers/Radio/Src/Radio.c ****     int Readable = Available;
+ 337:Drivers/Radio/Src/Radio.c ****     if (Readable <= 0) return 0;
+ 338:Drivers/Radio/Src/Radio.c ****     int Tail = RadioHandler->Tail;
+ 339:Drivers/Radio/Src/Radio.c ****     int Remain = RADIO_CIRCULAR_BUFFER_SIZE - Tail;
+ 340:Drivers/Radio/Src/Radio.c ****     if (Readable > Remain) {
+ 341:Drivers/Radio/Src/Radio.c ****         memmove(Buffer, (const void *)&RadioHandler->Buffer[Tail], Remain);
+ 342:Drivers/Radio/Src/Radio.c ****         memmove(Buffer + Remain, (const void *)RadioHandler->Buffer,
+ 343:Drivers/Radio/Src/Radio.c ****                Readable - Remain);
+ 344:Drivers/Radio/Src/Radio.c ****     } else {
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s 			page 39
+
+
+ 345:Drivers/Radio/Src/Radio.c ****         memmove(Buffer, (const void *)&RadioHandler->Buffer[Tail], Readable);
+ 346:Drivers/Radio/Src/Radio.c ****     }
+ 347:Drivers/Radio/Src/Radio.c ****     memset(Buffer + Readable + 1, '\0', 1);
+ 348:Drivers/Radio/Src/Radio.c ****     Radio_Increase_Pointer(&RadioHandler->Tail, Readable);
+ 349:Drivers/Radio/Src/Radio.c ****     return Readable;
+ 350:Drivers/Radio/Src/Radio.c **** }
+ 351:Drivers/Radio/Src/Radio.c **** 
+ 352:Drivers/Radio/Src/Radio.c **** /**
+ 353:Drivers/Radio/Src/Radio.c ****  * @brief The remain space of the circular buffer.
+ 354:Drivers/Radio/Src/Radio.c ****  * @return int The number of bytes available.
+ 355:Drivers/Radio/Src/Radio.c ****  */
+ 356:Drivers/Radio/Src/Radio.c **** int Radio_Remain() {
+ 1596              		.loc 1 356 20 is_stmt 1 view -0
+ 1597              		.cfi_startproc
+ 1598              		@ args = 0, pretend = 0, frame = 0
+ 1599              		@ frame_needed = 0, uses_anonymous_args = 0
+ 1600              		@ link register save eliminated.
+ 357:Drivers/Radio/Src/Radio.c ****     int Remain = RadioHandler->Tail - RadioHandler->Head;
+ 1601              		.loc 1 357 5 view .LVU409
+ 1602              		.loc 1 357 30 is_stmt 0 view .LVU410
+ 1603 0000 044B     		ldr	r3, .L117
+ 1604 0002 1B68     		ldr	r3, [r3]
+ 1605 0004 986D     		ldr	r0, [r3, #88]
+ 1606              		.loc 1 357 51 view .LVU411
+ 1607 0006 5B6D     		ldr	r3, [r3, #84]
+ 1608              		.loc 1 357 9 view .LVU412
+ 1609 0008 C01A     		subs	r0, r0, r3
+ 1610              	.LVL173:
+ 358:Drivers/Radio/Src/Radio.c ****     if (Remain <= 0) {
+ 1611              		.loc 1 358 5 is_stmt 1 view .LVU413
+ 1612              		.loc 1 358 8 is_stmt 0 view .LVU414
+ 1613 000a 0028     		cmp	r0, #0
+ 1614 000c 00DD     		ble	.L116
+ 1615              	.L114:
+ 359:Drivers/Radio/Src/Radio.c ****         Remain += RADIO_CIRCULAR_BUFFER_SIZE;
+ 360:Drivers/Radio/Src/Radio.c ****     }
+ 361:Drivers/Radio/Src/Radio.c ****     return Remain;
+ 362:Drivers/Radio/Src/Radio.c **** }
+ 1616              		.loc 1 362 1 view .LVU415
+ 1617 000e 7047     		bx	lr
+ 1618              	.L116:
+ 359:Drivers/Radio/Src/Radio.c ****         Remain += RADIO_CIRCULAR_BUFFER_SIZE;
+ 1619              		.loc 1 359 9 is_stmt 1 view .LVU416
+ 359:Drivers/Radio/Src/Radio.c ****         Remain += RADIO_CIRCULAR_BUFFER_SIZE;
+ 1620              		.loc 1 359 16 is_stmt 0 view .LVU417
+ 1621 0010 8030     		adds	r0, r0, #128
+ 1622              	.LVL174:
+ 361:Drivers/Radio/Src/Radio.c **** }
+ 1623              		.loc 1 361 5 is_stmt 1 view .LVU418
+ 361:Drivers/Radio/Src/Radio.c **** }
+ 1624              		.loc 1 361 12 is_stmt 0 view .LVU419
+ 1625 0012 FCE7     		b	.L114
+ 1626              	.L118:
+ 1627              		.align	2
+ 1628              	.L117:
+ 1629 0014 00000000 		.word	.LANCHOR0
+ 1630              		.cfi_endproc
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s 			page 40
+
+
+ 1631              	.LFE85:
+ 1633              		.section	.text.Radio_available,"ax",%progbits
+ 1634              		.align	1
+ 1635              		.global	Radio_available
+ 1636              		.syntax unified
+ 1637              		.thumb
+ 1638              		.thumb_func
+ 1640              	Radio_available:
+ 1641              	.LFB86:
+ 363:Drivers/Radio/Src/Radio.c **** 
+ 364:Drivers/Radio/Src/Radio.c **** /**
+ 365:Drivers/Radio/Src/Radio.c ****  * @brief Get the available character in the buffer.
+ 366:Drivers/Radio/Src/Radio.c ****  * @return int Number of string are remaining.
+ 367:Drivers/Radio/Src/Radio.c ****  */
+ 368:Drivers/Radio/Src/Radio.c **** int Radio_available() {
+ 1642              		.loc 1 368 23 is_stmt 1 view -0
+ 1643              		.cfi_startproc
+ 1644              		@ args = 0, pretend = 0, frame = 0
+ 1645              		@ frame_needed = 0, uses_anonymous_args = 0
+ 1646              		@ link register save eliminated.
+ 369:Drivers/Radio/Src/Radio.c ****     int Head = RadioHandler->Head;
+ 1647              		.loc 1 369 5 view .LVU421
+ 1648              		.loc 1 369 28 is_stmt 0 view .LVU422
+ 1649 0000 074B     		ldr	r3, .L123
+ 1650 0002 1B68     		ldr	r3, [r3]
+ 1651              		.loc 1 369 9 view .LVU423
+ 1652 0004 586D     		ldr	r0, [r3, #84]
+ 1653              	.LVL175:
+ 370:Drivers/Radio/Src/Radio.c ****     int Tail = RadioHandler->Tail;
+ 1654              		.loc 1 370 5 is_stmt 1 view .LVU424
+ 1655              		.loc 1 370 9 is_stmt 0 view .LVU425
+ 1656 0006 9B6D     		ldr	r3, [r3, #88]
+ 1657              	.LVL176:
+ 371:Drivers/Radio/Src/Radio.c ****     int available = 0;
+ 1658              		.loc 1 371 5 is_stmt 1 view .LVU426
+ 372:Drivers/Radio/Src/Radio.c ****     if (Head > Tail) {
+ 1659              		.loc 1 372 5 view .LVU427
+ 1660              		.loc 1 372 8 is_stmt 0 view .LVU428
+ 1661 0008 9842     		cmp	r0, r3
+ 1662 000a 01DD     		ble	.L120
+ 373:Drivers/Radio/Src/Radio.c ****         available = Head - Tail;
+ 1663              		.loc 1 373 9 is_stmt 1 view .LVU429
+ 1664              		.loc 1 373 19 is_stmt 0 view .LVU430
+ 1665 000c C01A     		subs	r0, r0, r3
+ 1666              	.LVL177:
+ 1667              		.loc 1 373 19 view .LVU431
+ 1668 000e 7047     		bx	lr
+ 1669              	.LVL178:
+ 1670              	.L120:
+ 374:Drivers/Radio/Src/Radio.c ****     } else if (Head < Tail) {
+ 1671              		.loc 1 374 12 is_stmt 1 view .LVU432
+ 1672              		.loc 1 374 15 is_stmt 0 view .LVU433
+ 1673 0010 9842     		cmp	r0, r3
+ 1674 0012 03DA     		bge	.L122
+ 375:Drivers/Radio/Src/Radio.c ****         available = RADIO_CIRCULAR_BUFFER_SIZE - Tail + Head;
+ 1675              		.loc 1 375 9 is_stmt 1 view .LVU434
+ 1676              		.loc 1 375 48 is_stmt 0 view .LVU435
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s 			page 41
+
+
+ 1677 0014 C3F18003 		rsb	r3, r3, #128
+ 1678              	.LVL179:
+ 1679              		.loc 1 375 19 view .LVU436
+ 1680 0018 1844     		add	r0, r0, r3
+ 1681              	.LVL180:
+ 1682              		.loc 1 375 19 view .LVU437
+ 1683 001a 7047     		bx	lr
+ 1684              	.LVL181:
+ 1685              	.L122:
+ 371:Drivers/Radio/Src/Radio.c ****     if (Head > Tail) {
+ 1686              		.loc 1 371 9 view .LVU438
+ 1687 001c 0020     		movs	r0, #0
+ 1688              	.LVL182:
+ 376:Drivers/Radio/Src/Radio.c ****     }
+ 377:Drivers/Radio/Src/Radio.c ****     return available;
+ 1689              		.loc 1 377 5 is_stmt 1 view .LVU439
+ 378:Drivers/Radio/Src/Radio.c **** }
+ 1690              		.loc 1 378 1 is_stmt 0 view .LVU440
+ 1691 001e 7047     		bx	lr
+ 1692              	.L124:
+ 1693              		.align	2
+ 1694              	.L123:
+ 1695 0020 00000000 		.word	.LANCHOR0
+ 1696              		.cfi_endproc
+ 1697              	.LFE86:
+ 1699              		.section	.text.Radio_Increase_Pointer,"ax",%progbits
+ 1700              		.align	1
+ 1701              		.global	Radio_Increase_Pointer
+ 1702              		.syntax unified
+ 1703              		.thumb
+ 1704              		.thumb_func
+ 1706              	Radio_Increase_Pointer:
+ 1707              	.LVL183:
+ 1708              	.LFB87:
+ 379:Drivers/Radio/Src/Radio.c **** 
+ 380:Drivers/Radio/Src/Radio.c **** /**
+ 381:Drivers/Radio/Src/Radio.c ****  * @brief Increase the pointer of the circular buffer.
+ 382:Drivers/Radio/Src/Radio.c ****  * @param Pointer The pointer.
+ 383:Drivers/Radio/Src/Radio.c ****  * @param NumbersBytes Numbers of bytes need to be increase.
+ 384:Drivers/Radio/Src/Radio.c ****  */
+ 385:Drivers/Radio/Src/Radio.c **** void Radio_Increase_Pointer(int *Pointer, uint16_t NumbersBytes) {
+ 1709              		.loc 1 385 66 is_stmt 1 view -0
+ 1710              		.cfi_startproc
+ 1711              		@ args = 0, pretend = 0, frame = 0
+ 1712              		@ frame_needed = 0, uses_anonymous_args = 0
+ 1713              		@ link register save eliminated.
+ 386:Drivers/Radio/Src/Radio.c ****     if (*Pointer + NumbersBytes >= RADIO_CIRCULAR_BUFFER_SIZE) {
+ 1714              		.loc 1 386 5 view .LVU442
+ 1715              		.loc 1 386 9 is_stmt 0 view .LVU443
+ 1716 0000 0368     		ldr	r3, [r0]
+ 1717              		.loc 1 386 18 view .LVU444
+ 1718 0002 5A18     		adds	r2, r3, r1
+ 1719              		.loc 1 386 8 view .LVU445
+ 1720 0004 7F2A     		cmp	r2, #127
+ 1721 0006 03DD     		ble	.L126
+ 387:Drivers/Radio/Src/Radio.c ****         *Pointer += NumbersBytes - RADIO_CIRCULAR_BUFFER_SIZE;
+ 1722              		.loc 1 387 9 is_stmt 1 view .LVU446
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s 			page 42
+
+
+ 1723              		.loc 1 387 34 is_stmt 0 view .LVU447
+ 1724 0008 8039     		subs	r1, r1, #128
+ 1725              	.LVL184:
+ 1726              		.loc 1 387 18 view .LVU448
+ 1727 000a 1944     		add	r1, r1, r3
+ 1728 000c 0160     		str	r1, [r0]
+ 1729 000e 7047     		bx	lr
+ 1730              	.LVL185:
+ 1731              	.L126:
+ 388:Drivers/Radio/Src/Radio.c ****     } else {
+ 389:Drivers/Radio/Src/Radio.c ****         *Pointer += NumbersBytes;
+ 1732              		.loc 1 389 9 is_stmt 1 view .LVU449
+ 1733              		.loc 1 389 18 is_stmt 0 view .LVU450
+ 1734 0010 0260     		str	r2, [r0]
+ 390:Drivers/Radio/Src/Radio.c ****     }
+ 391:Drivers/Radio/Src/Radio.c **** }
+ 1735              		.loc 1 391 1 view .LVU451
+ 1736 0012 7047     		bx	lr
+ 1737              		.cfi_endproc
+ 1738              	.LFE87:
+ 1740              		.section	.text.Radio_Get_String,"ax",%progbits
+ 1741              		.align	1
+ 1742              		.global	Radio_Get_String
+ 1743              		.syntax unified
+ 1744              		.thumb
+ 1745              		.thumb_func
+ 1747              	Radio_Get_String:
+ 1748              	.LVL186:
+ 1749              	.LFB84:
+ 332:Drivers/Radio/Src/Radio.c ****     int Available = Radio_available();
+ 1750              		.loc 1 332 49 is_stmt 1 view -0
+ 1751              		.cfi_startproc
+ 1752              		@ args = 0, pretend = 0, frame = 0
+ 1753              		@ frame_needed = 0, uses_anonymous_args = 0
+ 332:Drivers/Radio/Src/Radio.c ****     int Available = Radio_available();
+ 1754              		.loc 1 332 49 is_stmt 0 view .LVU453
+ 1755 0000 70B5     		push	{r4, r5, r6, lr}
+ 1756              	.LCFI18:
+ 1757              		.cfi_def_cfa_offset 16
+ 1758              		.cfi_offset 4, -16
+ 1759              		.cfi_offset 5, -12
+ 1760              		.cfi_offset 6, -8
+ 1761              		.cfi_offset 14, -4
+ 1762 0002 0546     		mov	r5, r0
+ 1763 0004 0C46     		mov	r4, r1
+ 333:Drivers/Radio/Src/Radio.c ****     if(Available > Size)
+ 1764              		.loc 1 333 5 is_stmt 1 view .LVU454
+ 333:Drivers/Radio/Src/Radio.c ****     if(Available > Size)
+ 1765              		.loc 1 333 21 is_stmt 0 view .LVU455
+ 1766 0006 FFF7FEFF 		bl	Radio_available
+ 1767              	.LVL187:
+ 334:Drivers/Radio/Src/Radio.c ****         Available = Size;
+ 1768              		.loc 1 334 5 is_stmt 1 view .LVU456
+ 334:Drivers/Radio/Src/Radio.c ****         Available = Size;
+ 1769              		.loc 1 334 7 is_stmt 0 view .LVU457
+ 1770 000a A042     		cmp	r0, r4
+ 1771 000c 00DC     		bgt	.L129
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s 			page 43
+
+
+ 333:Drivers/Radio/Src/Radio.c ****     if(Available > Size)
+ 1772              		.loc 1 333 21 view .LVU458
+ 1773 000e 0446     		mov	r4, r0
+ 1774              	.LVL188:
+ 1775              	.L129:
+ 336:Drivers/Radio/Src/Radio.c ****     if (Readable <= 0) return 0;
+ 1776              		.loc 1 336 5 is_stmt 1 view .LVU459
+ 337:Drivers/Radio/Src/Radio.c ****     int Tail = RadioHandler->Tail;
+ 1777              		.loc 1 337 5 view .LVU460
+ 337:Drivers/Radio/Src/Radio.c ****     int Tail = RadioHandler->Tail;
+ 1778              		.loc 1 337 8 is_stmt 0 view .LVU461
+ 1779 0010 002C     		cmp	r4, #0
+ 1780 0012 27DD     		ble	.L133
+ 338:Drivers/Radio/Src/Radio.c ****     int Remain = RADIO_CIRCULAR_BUFFER_SIZE - Tail;
+ 1781              		.loc 1 338 5 is_stmt 1 view .LVU462
+ 338:Drivers/Radio/Src/Radio.c ****     int Remain = RADIO_CIRCULAR_BUFFER_SIZE - Tail;
+ 1782              		.loc 1 338 28 is_stmt 0 view .LVU463
+ 1783 0014 144B     		ldr	r3, .L135
+ 1784 0016 1968     		ldr	r1, [r3]
+ 338:Drivers/Radio/Src/Radio.c ****     int Remain = RADIO_CIRCULAR_BUFFER_SIZE - Tail;
+ 1785              		.loc 1 338 9 view .LVU464
+ 1786 0018 8B6D     		ldr	r3, [r1, #88]
+ 1787              	.LVL189:
+ 339:Drivers/Radio/Src/Radio.c ****     if (Readable > Remain) {
+ 1788              		.loc 1 339 5 is_stmt 1 view .LVU465
+ 339:Drivers/Radio/Src/Radio.c ****     if (Readable > Remain) {
+ 1789              		.loc 1 339 9 is_stmt 0 view .LVU466
+ 1790 001a C3F18006 		rsb	r6, r3, #128
+ 1791              	.LVL190:
+ 340:Drivers/Radio/Src/Radio.c ****         memmove(Buffer, (const void *)&RadioHandler->Buffer[Tail], Remain);
+ 1792              		.loc 1 340 5 is_stmt 1 view .LVU467
+ 340:Drivers/Radio/Src/Radio.c ****         memmove(Buffer, (const void *)&RadioHandler->Buffer[Tail], Remain);
+ 1793              		.loc 1 340 8 is_stmt 0 view .LVU468
+ 1794 001e B442     		cmp	r4, r6
+ 1795 0020 18DD     		ble	.L131
+ 341:Drivers/Radio/Src/Radio.c ****         memmove(Buffer + Remain, (const void *)RadioHandler->Buffer,
+ 1796              		.loc 1 341 9 is_stmt 1 view .LVU469
+ 341:Drivers/Radio/Src/Radio.c ****         memmove(Buffer + Remain, (const void *)RadioHandler->Buffer,
+ 1797              		.loc 1 341 39 is_stmt 0 view .LVU470
+ 1798 0022 5833     		adds	r3, r3, #88
+ 1799              	.LVL191:
+ 341:Drivers/Radio/Src/Radio.c ****         memmove(Buffer + Remain, (const void *)RadioHandler->Buffer,
+ 1800              		.loc 1 341 39 view .LVU471
+ 1801 0024 1944     		add	r1, r1, r3
+ 1802              	.LVL192:
+ 341:Drivers/Radio/Src/Radio.c ****         memmove(Buffer + Remain, (const void *)RadioHandler->Buffer,
+ 1803              		.loc 1 341 9 view .LVU472
+ 1804 0026 3246     		mov	r2, r6
+ 1805 0028 0431     		adds	r1, r1, #4
+ 1806 002a 2846     		mov	r0, r5
+ 1807 002c FFF7FEFF 		bl	memmove
+ 1808              	.LVL193:
+ 342:Drivers/Radio/Src/Radio.c ****                Readable - Remain);
+ 1809              		.loc 1 342 9 is_stmt 1 view .LVU473
+ 342:Drivers/Radio/Src/Radio.c ****                Readable - Remain);
+ 1810              		.loc 1 342 60 is_stmt 0 view .LVU474
+ 1811 0030 0D4B     		ldr	r3, .L135
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s 			page 44
+
+
+ 1812 0032 1968     		ldr	r1, [r3]
+ 342:Drivers/Radio/Src/Radio.c ****                Readable - Remain);
+ 1813              		.loc 1 342 9 view .LVU475
+ 1814 0034 A21B     		subs	r2, r4, r6
+ 1815 0036 5C31     		adds	r1, r1, #92
+ 1816 0038 A819     		adds	r0, r5, r6
+ 1817 003a FFF7FEFF 		bl	memmove
+ 1818              	.LVL194:
+ 1819              	.L132:
+ 347:Drivers/Radio/Src/Radio.c ****     Radio_Increase_Pointer(&RadioHandler->Tail, Readable);
+ 1820              		.loc 1 347 5 is_stmt 1 view .LVU476
+ 347:Drivers/Radio/Src/Radio.c ****     Radio_Increase_Pointer(&RadioHandler->Tail, Readable);
+ 1821              		.loc 1 347 30 is_stmt 0 view .LVU477
+ 1822 003e 631C     		adds	r3, r4, #1
+ 347:Drivers/Radio/Src/Radio.c ****     Radio_Increase_Pointer(&RadioHandler->Tail, Readable);
+ 1823              		.loc 1 347 5 view .LVU478
+ 1824 0040 0022     		movs	r2, #0
+ 1825 0042 EA54     		strb	r2, [r5, r3]
+ 348:Drivers/Radio/Src/Radio.c ****     return Readable;
+ 1826              		.loc 1 348 5 is_stmt 1 view .LVU479
+ 348:Drivers/Radio/Src/Radio.c ****     return Readable;
+ 1827              		.loc 1 348 41 is_stmt 0 view .LVU480
+ 1828 0044 084B     		ldr	r3, .L135
+ 1829 0046 1868     		ldr	r0, [r3]
+ 348:Drivers/Radio/Src/Radio.c ****     return Readable;
+ 1830              		.loc 1 348 5 view .LVU481
+ 1831 0048 A1B2     		uxth	r1, r4
+ 1832 004a 5830     		adds	r0, r0, #88
+ 1833 004c FFF7FEFF 		bl	Radio_Increase_Pointer
+ 1834              	.LVL195:
+ 349:Drivers/Radio/Src/Radio.c **** }
+ 1835              		.loc 1 349 5 is_stmt 1 view .LVU482
+ 349:Drivers/Radio/Src/Radio.c **** }
+ 1836              		.loc 1 349 12 is_stmt 0 view .LVU483
+ 1837 0050 2046     		mov	r0, r4
+ 1838              	.LVL196:
+ 1839              	.L128:
+ 350:Drivers/Radio/Src/Radio.c **** 
+ 1840              		.loc 1 350 1 view .LVU484
+ 1841 0052 70BD     		pop	{r4, r5, r6, pc}
+ 1842              	.LVL197:
+ 1843              	.L131:
+ 345:Drivers/Radio/Src/Radio.c ****     }
+ 1844              		.loc 1 345 9 is_stmt 1 view .LVU485
+ 345:Drivers/Radio/Src/Radio.c ****     }
+ 1845              		.loc 1 345 39 is_stmt 0 view .LVU486
+ 1846 0054 5833     		adds	r3, r3, #88
+ 1847              	.LVL198:
+ 345:Drivers/Radio/Src/Radio.c ****     }
+ 1848              		.loc 1 345 39 view .LVU487
+ 1849 0056 1944     		add	r1, r1, r3
+ 1850              	.LVL199:
+ 345:Drivers/Radio/Src/Radio.c ****     }
+ 1851              		.loc 1 345 9 view .LVU488
+ 1852 0058 2246     		mov	r2, r4
+ 1853 005a 0431     		adds	r1, r1, #4
+ 1854 005c 2846     		mov	r0, r5
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s 			page 45
+
+
+ 1855 005e FFF7FEFF 		bl	memmove
+ 1856              	.LVL200:
+ 345:Drivers/Radio/Src/Radio.c ****     }
+ 1857              		.loc 1 345 9 view .LVU489
+ 1858 0062 ECE7     		b	.L132
+ 1859              	.LVL201:
+ 1860              	.L133:
+ 337:Drivers/Radio/Src/Radio.c ****     int Tail = RadioHandler->Tail;
+ 1861              		.loc 1 337 31 view .LVU490
+ 1862 0064 0020     		movs	r0, #0
+ 1863 0066 F4E7     		b	.L128
+ 1864              	.L136:
+ 1865              		.align	2
+ 1866              	.L135:
+ 1867 0068 00000000 		.word	.LANCHOR0
+ 1868              		.cfi_endproc
+ 1869              	.LFE84:
+ 1871              		.section	.text.Varires_Calib,"ax",%progbits
+ 1872              		.align	1
+ 1873              		.global	Varires_Calib
+ 1874              		.syntax unified
+ 1875              		.thumb
+ 1876              		.thumb_func
+ 1878              	Varires_Calib:
+ 1879              	.LVL202:
+ 1880              	.LFB88:
+ 392:Drivers/Radio/Src/Radio.c **** 
+ 393:Drivers/Radio/Src/Radio.c **** // Support function for VarRes
+ 394:Drivers/Radio/Src/Radio.c **** void Varires_Calib(VariRes_Value_t *vrOffset, uint16_t *AdcDMA,
+ 395:Drivers/Radio/Src/Radio.c ****                    uint16_t ui16Times) {
+ 1881              		.loc 1 395 40 is_stmt 1 view -0
+ 1882              		.cfi_startproc
+ 1883              		@ args = 0, pretend = 0, frame = 16
+ 1884              		@ frame_needed = 0, uses_anonymous_args = 0
+ 1885              		.loc 1 395 40 is_stmt 0 view .LVU492
+ 1886 0000 F0B5     		push	{r4, r5, r6, r7, lr}
+ 1887              	.LCFI19:
+ 1888              		.cfi_def_cfa_offset 20
+ 1889              		.cfi_offset 4, -20
+ 1890              		.cfi_offset 5, -16
+ 1891              		.cfi_offset 6, -12
+ 1892              		.cfi_offset 7, -8
+ 1893              		.cfi_offset 14, -4
+ 1894 0002 85B0     		sub	sp, sp, #20
+ 1895              	.LCFI20:
+ 1896              		.cfi_def_cfa_offset 40
+ 1897 0004 0746     		mov	r7, r0
+ 1898 0006 0D46     		mov	r5, r1
+ 1899 0008 1646     		mov	r6, r2
+ 396:Drivers/Radio/Src/Radio.c ****     uint16_t i;
+ 1900              		.loc 1 396 5 is_stmt 1 view .LVU493
+ 397:Drivers/Radio/Src/Radio.c ****     uint32_t buffer[4];
+ 1901              		.loc 1 397 5 view .LVU494
+ 398:Drivers/Radio/Src/Radio.c ****     memset(buffer, 0x00, sizeof(uint32_t) * 4);
+ 1902              		.loc 1 398 5 view .LVU495
+ 1903 000a 0024     		movs	r4, #0
+ 1904 000c 0094     		str	r4, [sp]
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s 			page 46
+
+
+ 1905 000e 0194     		str	r4, [sp, #4]
+ 1906 0010 0294     		str	r4, [sp, #8]
+ 1907 0012 0394     		str	r4, [sp, #12]
+ 399:Drivers/Radio/Src/Radio.c ****     for (i = 0; i < ui16Times; i++) {
+ 1908              		.loc 1 399 5 view .LVU496
+ 1909              	.LVL203:
+ 1910              		.loc 1 399 5 is_stmt 0 view .LVU497
+ 1911 0014 19E0     		b	.L138
+ 1912              	.LVL204:
+ 1913              	.L139:
+ 400:Drivers/Radio/Src/Radio.c ****         buffer[0] += *AdcDMA;
+ 1914              		.loc 1 400 9 is_stmt 1 discriminator 3 view .LVU498
+ 1915              		.loc 1 400 22 is_stmt 0 discriminator 3 view .LVU499
+ 1916 0016 2A88     		ldrh	r2, [r5]
+ 1917              		.loc 1 400 19 discriminator 3 view .LVU500
+ 1918 0018 009B     		ldr	r3, [sp]
+ 1919 001a 1344     		add	r3, r3, r2
+ 1920 001c 0093     		str	r3, [sp]
+ 401:Drivers/Radio/Src/Radio.c ****         buffer[1] += *(AdcDMA + 1);
+ 1921              		.loc 1 401 9 is_stmt 1 discriminator 3 view .LVU501
+ 1922              		.loc 1 401 22 is_stmt 0 discriminator 3 view .LVU502
+ 1923 001e 6A88     		ldrh	r2, [r5, #2]
+ 1924              		.loc 1 401 19 discriminator 3 view .LVU503
+ 1925 0020 019B     		ldr	r3, [sp, #4]
+ 1926 0022 1344     		add	r3, r3, r2
+ 1927 0024 0193     		str	r3, [sp, #4]
+ 402:Drivers/Radio/Src/Radio.c ****         buffer[2] += *(AdcDMA + 2);
+ 1928              		.loc 1 402 9 is_stmt 1 discriminator 3 view .LVU504
+ 1929              		.loc 1 402 22 is_stmt 0 discriminator 3 view .LVU505
+ 1930 0026 AA88     		ldrh	r2, [r5, #4]
+ 1931              		.loc 1 402 19 discriminator 3 view .LVU506
+ 1932 0028 029B     		ldr	r3, [sp, #8]
+ 1933 002a 1344     		add	r3, r3, r2
+ 1934 002c 0293     		str	r3, [sp, #8]
+ 403:Drivers/Radio/Src/Radio.c ****         buffer[3] += *(AdcDMA + 3);
+ 1935              		.loc 1 403 9 is_stmt 1 discriminator 3 view .LVU507
+ 1936              		.loc 1 403 22 is_stmt 0 discriminator 3 view .LVU508
+ 1937 002e EA88     		ldrh	r2, [r5, #6]
+ 1938              		.loc 1 403 19 discriminator 3 view .LVU509
+ 1939 0030 039B     		ldr	r3, [sp, #12]
+ 1940 0032 1344     		add	r3, r3, r2
+ 1941 0034 0393     		str	r3, [sp, #12]
+ 404:Drivers/Radio/Src/Radio.c ****         HAL_Delay(20);
+ 1942              		.loc 1 404 9 is_stmt 1 discriminator 3 view .LVU510
+ 1943 0036 1420     		movs	r0, #20
+ 1944 0038 FFF7FEFF 		bl	HAL_Delay
+ 1945              	.LVL205:
+ 405:Drivers/Radio/Src/Radio.c ****         /* USER CODE BEGIN */
+ 406:Drivers/Radio/Src/Radio.c ****         HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
+ 1946              		.loc 1 406 9 discriminator 3 view .LVU511
+ 1947 003c 4FF40051 		mov	r1, #8192
+ 1948 0040 0C48     		ldr	r0, .L141
+ 1949 0042 FFF7FEFF 		bl	HAL_GPIO_TogglePin
+ 1950              	.LVL206:
+ 399:Drivers/Radio/Src/Radio.c ****         buffer[0] += *AdcDMA;
+ 1951              		.loc 1 399 32 discriminator 3 view .LVU512
+ 399:Drivers/Radio/Src/Radio.c ****         buffer[0] += *AdcDMA;
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s 			page 47
+
+
+ 1952              		.loc 1 399 33 is_stmt 0 discriminator 3 view .LVU513
+ 1953 0046 0134     		adds	r4, r4, #1
+ 1954              	.LVL207:
+ 399:Drivers/Radio/Src/Radio.c ****         buffer[0] += *AdcDMA;
+ 1955              		.loc 1 399 33 discriminator 3 view .LVU514
+ 1956 0048 A4B2     		uxth	r4, r4
+ 1957              	.LVL208:
+ 1958              	.L138:
+ 399:Drivers/Radio/Src/Radio.c ****         buffer[0] += *AdcDMA;
+ 1959              		.loc 1 399 17 is_stmt 1 discriminator 1 view .LVU515
+ 399:Drivers/Radio/Src/Radio.c ****         buffer[0] += *AdcDMA;
+ 1960              		.loc 1 399 5 is_stmt 0 discriminator 1 view .LVU516
+ 1961 004a B442     		cmp	r4, r6
+ 1962 004c E3D3     		bcc	.L139
+ 407:Drivers/Radio/Src/Radio.c ****         /* USER CODE End */
+ 408:Drivers/Radio/Src/Radio.c ****     }
+ 409:Drivers/Radio/Src/Radio.c ****     vrOffset->Adc1 = buffer[0] / ui16Times;
+ 1963              		.loc 1 409 5 is_stmt 1 view .LVU517
+ 1964              		.loc 1 409 28 is_stmt 0 view .LVU518
+ 1965 004e 009B     		ldr	r3, [sp]
+ 1966              		.loc 1 409 32 view .LVU519
+ 1967 0050 B3FBF6F3 		udiv	r3, r3, r6
+ 1968              		.loc 1 409 20 view .LVU520
+ 1969 0054 3B80     		strh	r3, [r7]	@ movhi
+ 410:Drivers/Radio/Src/Radio.c ****     vrOffset->Adc2 = buffer[1] / ui16Times;
+ 1970              		.loc 1 410 5 is_stmt 1 view .LVU521
+ 1971              		.loc 1 410 28 is_stmt 0 view .LVU522
+ 1972 0056 019B     		ldr	r3, [sp, #4]
+ 1973              		.loc 1 410 32 view .LVU523
+ 1974 0058 B3FBF6F3 		udiv	r3, r3, r6
+ 1975              		.loc 1 410 20 view .LVU524
+ 1976 005c 7B80     		strh	r3, [r7, #2]	@ movhi
+ 411:Drivers/Radio/Src/Radio.c ****     vrOffset->Adc3 = buffer[2] / ui16Times;
+ 1977              		.loc 1 411 5 is_stmt 1 view .LVU525
+ 1978              		.loc 1 411 28 is_stmt 0 view .LVU526
+ 1979 005e 029B     		ldr	r3, [sp, #8]
+ 1980              		.loc 1 411 32 view .LVU527
+ 1981 0060 B3FBF6F3 		udiv	r3, r3, r6
+ 1982              		.loc 1 411 20 view .LVU528
+ 1983 0064 BB80     		strh	r3, [r7, #4]	@ movhi
+ 412:Drivers/Radio/Src/Radio.c ****     vrOffset->Adc4 = buffer[3] / ui16Times;
+ 1984              		.loc 1 412 5 is_stmt 1 view .LVU529
+ 1985              		.loc 1 412 28 is_stmt 0 view .LVU530
+ 1986 0066 039B     		ldr	r3, [sp, #12]
+ 1987              		.loc 1 412 32 view .LVU531
+ 1988 0068 B3FBF6F3 		udiv	r3, r3, r6
+ 1989              		.loc 1 412 20 view .LVU532
+ 1990 006c FB80     		strh	r3, [r7, #6]	@ movhi
+ 413:Drivers/Radio/Src/Radio.c **** }
+ 1991              		.loc 1 413 1 view .LVU533
+ 1992 006e 05B0     		add	sp, sp, #20
+ 1993              	.LCFI21:
+ 1994              		.cfi_def_cfa_offset 20
+ 1995              		@ sp needed
+ 1996 0070 F0BD     		pop	{r4, r5, r6, r7, pc}
+ 1997              	.LVL209:
+ 1998              	.L142:
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s 			page 48
+
+
+ 1999              		.loc 1 413 1 view .LVU534
+ 2000 0072 00BF     		.align	2
+ 2001              	.L141:
+ 2002 0074 00040240 		.word	1073873920
+ 2003              		.cfi_endproc
+ 2004              	.LFE88:
+ 2006              		.section	.text.Calculate_PWM,"ax",%progbits
+ 2007              		.align	1
+ 2008              		.global	Calculate_PWM
+ 2009              		.syntax unified
+ 2010              		.thumb
+ 2011              		.thumb_func
+ 2013              	Calculate_PWM:
+ 2014              	.LVL210:
+ 2015              	.LFB89:
+ 414:Drivers/Radio/Src/Radio.c **** 
+ 415:Drivers/Radio/Src/Radio.c **** void Calculate_PWM(VariRes_Value_t *ui16PWM, uint16_t *ui16Adc,
+ 416:Drivers/Radio/Src/Radio.c ****                    VariRes_Value_t *VrOffsetValue) {
+ 2016              		.loc 1 416 52 is_stmt 1 view -0
+ 2017              		.cfi_startproc
+ 2018              		@ args = 0, pretend = 0, frame = 0
+ 2019              		@ frame_needed = 0, uses_anonymous_args = 0
+ 2020              		.loc 1 416 52 is_stmt 0 view .LVU536
+ 2021 0000 F0B5     		push	{r4, r5, r6, r7, lr}
+ 2022              	.LCFI22:
+ 2023              		.cfi_def_cfa_offset 20
+ 2024              		.cfi_offset 4, -20
+ 2025              		.cfi_offset 5, -16
+ 2026              		.cfi_offset 6, -12
+ 2027              		.cfi_offset 7, -8
+ 2028              		.cfi_offset 14, -4
+ 417:Drivers/Radio/Src/Radio.c ****     static int Temp[4];
+ 2029              		.loc 1 417 5 is_stmt 1 view .LVU537
+ 418:Drivers/Radio/Src/Radio.c ****     static int count = 1;
+ 2030              		.loc 1 418 5 view .LVU538
+ 419:Drivers/Radio/Src/Radio.c ****     if (count < 5) {
+ 2031              		.loc 1 419 5 view .LVU539
+ 2032              		.loc 1 419 15 is_stmt 0 view .LVU540
+ 2033 0002 544B     		ldr	r3, .L161
+ 2034 0004 1B68     		ldr	r3, [r3]
+ 2035              		.loc 1 419 8 view .LVU541
+ 2036 0006 042B     		cmp	r3, #4
+ 2037 0008 11DD     		ble	.L158
+ 2038              	.LBB5:
+ 420:Drivers/Radio/Src/Radio.c ****         for(int i = 0; i < 4; i++) {
+ 421:Drivers/Radio/Src/Radio.c ****             Temp[i] += ui16Adc[i];
+ 422:Drivers/Radio/Src/Radio.c ****         }
+ 423:Drivers/Radio/Src/Radio.c ****     } else {
+ 424:Drivers/Radio/Src/Radio.c ****         for(int i = 0; i < 4; i++) {
+ 2039              		.loc 1 424 17 view .LVU542
+ 2040 000a 0021     		movs	r1, #0
+ 2041              	.LVL211:
+ 2042              		.loc 1 424 17 view .LVU543
+ 2043 000c 15E0     		b	.L145
+ 2044              	.LVL212:
+ 2045              	.L146:
+ 2046              		.loc 1 424 17 view .LVU544
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s 			page 49
+
+
+ 2047              	.LBE5:
+ 2048              	.LBB6:
+ 421:Drivers/Radio/Src/Radio.c ****         }
+ 2049              		.loc 1 421 13 is_stmt 1 discriminator 3 view .LVU545
+ 421:Drivers/Radio/Src/Radio.c ****         }
+ 2050              		.loc 1 421 31 is_stmt 0 discriminator 3 view .LVU546
+ 2051 000e 31F81340 		ldrh	r4, [r1, r3, lsl #1]
+ 421:Drivers/Radio/Src/Radio.c ****         }
+ 2052              		.loc 1 421 21 discriminator 3 view .LVU547
+ 2053 0012 5148     		ldr	r0, .L161+4
+ 2054 0014 50F82320 		ldr	r2, [r0, r3, lsl #2]
+ 2055 0018 2244     		add	r2, r2, r4
+ 2056 001a 40F82320 		str	r2, [r0, r3, lsl #2]
+ 420:Drivers/Radio/Src/Radio.c ****         for(int i = 0; i < 4; i++) {
+ 2057              		.loc 1 420 31 is_stmt 1 discriminator 3 view .LVU548
+ 420:Drivers/Radio/Src/Radio.c ****         for(int i = 0; i < 4; i++) {
+ 2058              		.loc 1 420 32 is_stmt 0 discriminator 3 view .LVU549
+ 2059 001e 0133     		adds	r3, r3, #1
+ 2060              	.LVL213:
+ 2061              	.L144:
+ 420:Drivers/Radio/Src/Radio.c ****         for(int i = 0; i < 4; i++) {
+ 2062              		.loc 1 420 24 is_stmt 1 discriminator 1 view .LVU550
+ 420:Drivers/Radio/Src/Radio.c ****         for(int i = 0; i < 4; i++) {
+ 2063              		.loc 1 420 9 is_stmt 0 discriminator 1 view .LVU551
+ 2064 0020 032B     		cmp	r3, #3
+ 2065 0022 F4DD     		ble	.L146
+ 2066              	.LVL214:
+ 2067              	.L147:
+ 420:Drivers/Radio/Src/Radio.c ****         for(int i = 0; i < 4; i++) {
+ 2068              		.loc 1 420 9 discriminator 1 view .LVU552
+ 2069              	.LBE6:
+ 425:Drivers/Radio/Src/Radio.c ****             Temp[i] /= 4;
+ 426:Drivers/Radio/Src/Radio.c ****         }
+ 427:Drivers/Radio/Src/Radio.c ****         // Calculate Adc value
+ 428:Drivers/Radio/Src/Radio.c ****         ui16PWM->Adc1 =
+ 429:Drivers/Radio/Src/Radio.c ****             (*Temp - VrOffsetValue->Adc1 + 2048) * 1000 / 4095 + 1000;
+ 430:Drivers/Radio/Src/Radio.c ****         ui16PWM->Adc2 =
+ 431:Drivers/Radio/Src/Radio.c ****             (*(Temp + 1) - VrOffsetValue->Adc2 + 2048) * 1000 / 4095 + 1000;
+ 432:Drivers/Radio/Src/Radio.c ****         ui16PWM->Adc4 =
+ 433:Drivers/Radio/Src/Radio.c ****             (*(Temp + 3) - VrOffsetValue->Adc4 + 2048) * 1000 / 4095 + 1000;
+ 434:Drivers/Radio/Src/Radio.c ****         ui16PWM->Adc3 =
+ 435:Drivers/Radio/Src/Radio.c ****             (*(Temp + 2) - VrOffsetValue->Adc3 + 0) * 1000 / 4095 + 1000;
+ 436:Drivers/Radio/Src/Radio.c ****         if (ui16PWM->Adc1 < 1000)
+ 437:Drivers/Radio/Src/Radio.c ****             ui16PWM->Adc1 = 1000;
+ 438:Drivers/Radio/Src/Radio.c ****         else if (ui16PWM->Adc1 > 2000)
+ 439:Drivers/Radio/Src/Radio.c ****             ui16PWM->Adc1 = 2000;
+ 440:Drivers/Radio/Src/Radio.c ****         if (ui16PWM->Adc2 < 1000)
+ 441:Drivers/Radio/Src/Radio.c ****             ui16PWM->Adc2 = 1000;
+ 442:Drivers/Radio/Src/Radio.c ****         else if (ui16PWM->Adc2 > 2000)
+ 443:Drivers/Radio/Src/Radio.c ****             ui16PWM->Adc2 = 2000;
+ 444:Drivers/Radio/Src/Radio.c ****         if (ui16PWM->Adc3 < 1000)
+ 445:Drivers/Radio/Src/Radio.c ****             ui16PWM->Adc3 = 1000;
+ 446:Drivers/Radio/Src/Radio.c ****         else if (ui16PWM->Adc3 > 2000)
+ 447:Drivers/Radio/Src/Radio.c ****             ui16PWM->Adc3 = 2000;
+ 448:Drivers/Radio/Src/Radio.c ****         if (ui16PWM->Adc4 < 1000)
+ 449:Drivers/Radio/Src/Radio.c ****             ui16PWM->Adc4 = 1000;
+ 450:Drivers/Radio/Src/Radio.c ****         else if (ui16PWM->Adc4 > 2000)
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s 			page 50
+
+
+ 451:Drivers/Radio/Src/Radio.c ****             ui16PWM->Adc4 = 2000;
+ 452:Drivers/Radio/Src/Radio.c ****         memset(Temp, 0, sizeof(uint32_t) * 4);
+ 453:Drivers/Radio/Src/Radio.c ****         count = 0;
+ 454:Drivers/Radio/Src/Radio.c ****     }
+ 455:Drivers/Radio/Src/Radio.c ****     count ++;
+ 2070              		.loc 1 455 5 is_stmt 1 view .LVU553
+ 2071              		.loc 1 455 11 is_stmt 0 view .LVU554
+ 2072 0024 4B4A     		ldr	r2, .L161
+ 2073 0026 1368     		ldr	r3, [r2]
+ 2074 0028 0133     		adds	r3, r3, #1
+ 2075 002a 1360     		str	r3, [r2]
+ 456:Drivers/Radio/Src/Radio.c **** }
+ 2076              		.loc 1 456 1 view .LVU555
+ 2077 002c F0BD     		pop	{r4, r5, r6, r7, pc}
+ 2078              	.LVL215:
+ 2079              	.L158:
+ 2080              	.LBB7:
+ 420:Drivers/Radio/Src/Radio.c ****             Temp[i] += ui16Adc[i];
+ 2081              		.loc 1 420 17 view .LVU556
+ 2082 002e 0023     		movs	r3, #0
+ 2083 0030 F6E7     		b	.L144
+ 2084              	.LVL216:
+ 2085              	.L148:
+ 420:Drivers/Radio/Src/Radio.c ****             Temp[i] += ui16Adc[i];
+ 2086              		.loc 1 420 17 view .LVU557
+ 2087              	.LBE7:
+ 2088              	.LBB8:
+ 425:Drivers/Radio/Src/Radio.c ****             Temp[i] /= 4;
+ 2089              		.loc 1 425 21 discriminator 3 view .LVU558
+ 2090 0032 9B10     		asrs	r3, r3, #2
+ 2091 0034 44F82130 		str	r3, [r4, r1, lsl #2]
+ 424:Drivers/Radio/Src/Radio.c ****             Temp[i] /= 4;
+ 2092              		.loc 1 424 31 is_stmt 1 discriminator 3 view .LVU559
+ 424:Drivers/Radio/Src/Radio.c ****             Temp[i] /= 4;
+ 2093              		.loc 1 424 32 is_stmt 0 discriminator 3 view .LVU560
+ 2094 0038 0131     		adds	r1, r1, #1
+ 2095              	.LVL217:
+ 2096              	.L145:
+ 424:Drivers/Radio/Src/Radio.c ****             Temp[i] /= 4;
+ 2097              		.loc 1 424 24 is_stmt 1 discriminator 1 view .LVU561
+ 424:Drivers/Radio/Src/Radio.c ****             Temp[i] /= 4;
+ 2098              		.loc 1 424 9 is_stmt 0 discriminator 1 view .LVU562
+ 2099 003a 0329     		cmp	r1, #3
+ 2100 003c 06DC     		bgt	.L160
+ 425:Drivers/Radio/Src/Radio.c ****         }
+ 2101              		.loc 1 425 13 is_stmt 1 discriminator 3 view .LVU563
+ 425:Drivers/Radio/Src/Radio.c ****         }
+ 2102              		.loc 1 425 21 is_stmt 0 discriminator 3 view .LVU564
+ 2103 003e 464C     		ldr	r4, .L161+4
+ 2104 0040 54F82130 		ldr	r3, [r4, r1, lsl #2]
+ 2105 0044 002B     		cmp	r3, #0
+ 2106 0046 F4DA     		bge	.L148
+ 2107 0048 0333     		adds	r3, r3, #3
+ 2108 004a F2E7     		b	.L148
+ 2109              	.L160:
+ 2110              	.LBE8:
+ 428:Drivers/Radio/Src/Radio.c ****             (*Temp - VrOffsetValue->Adc1 + 2048) * 1000 / 4095 + 1000;
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s 			page 51
+
+
+ 2111              		.loc 1 428 9 is_stmt 1 view .LVU565
+ 429:Drivers/Radio/Src/Radio.c ****         ui16PWM->Adc2 =
+ 2112              		.loc 1 429 14 is_stmt 0 view .LVU566
+ 2113 004c 424B     		ldr	r3, .L161+4
+ 2114 004e 1968     		ldr	r1, [r3]
+ 2115              	.LVL218:
+ 429:Drivers/Radio/Src/Radio.c ****         ui16PWM->Adc2 =
+ 2116              		.loc 1 429 35 view .LVU567
+ 2117 0050 1488     		ldrh	r4, [r2]
+ 429:Drivers/Radio/Src/Radio.c ****         ui16PWM->Adc2 =
+ 2118              		.loc 1 429 20 view .LVU568
+ 2119 0052 091B     		subs	r1, r1, r4
+ 429:Drivers/Radio/Src/Radio.c ****         ui16PWM->Adc2 =
+ 2120              		.loc 1 429 42 view .LVU569
+ 2121 0054 01F50061 		add	r1, r1, #2048
+ 429:Drivers/Radio/Src/Radio.c ****         ui16PWM->Adc2 =
+ 2122              		.loc 1 429 50 view .LVU570
+ 2123 0058 4FF47A75 		mov	r5, #1000
+ 2124 005c 05FB01F1 		mul	r1, r5, r1
+ 429:Drivers/Radio/Src/Radio.c ****         ui16PWM->Adc2 =
+ 2125              		.loc 1 429 57 view .LVU571
+ 2126 0060 3E4C     		ldr	r4, .L161+8
+ 2127 0062 84FB016E 		smull	r6, lr, r4, r1
+ 2128 0066 0EEB0106 		add	r6, lr, r1
+ 2129 006a 4FEAE17E 		asr	lr, r1, #31
+ 2130 006e CEEBE62E 		rsb	lr, lr, r6, asr #11
+ 429:Drivers/Radio/Src/Radio.c ****         ui16PWM->Adc2 =
+ 2131              		.loc 1 429 64 view .LVU572
+ 2132 0072 AE44     		add	lr, lr, r5
+ 2133 0074 1FFA8EFE 		uxth	lr, lr
+ 428:Drivers/Radio/Src/Radio.c ****             (*Temp - VrOffsetValue->Adc1 + 2048) * 1000 / 4095 + 1000;
+ 2134              		.loc 1 428 23 view .LVU573
+ 2135 0078 A0F800E0 		strh	lr, [r0]	@ movhi
+ 430:Drivers/Radio/Src/Radio.c ****             (*(Temp + 1) - VrOffsetValue->Adc2 + 2048) * 1000 / 4095 + 1000;
+ 2136              		.loc 1 430 9 is_stmt 1 view .LVU574
+ 431:Drivers/Radio/Src/Radio.c ****         ui16PWM->Adc4 =
+ 2137              		.loc 1 431 14 is_stmt 0 view .LVU575
+ 2138 007c 5968     		ldr	r1, [r3, #4]
+ 431:Drivers/Radio/Src/Radio.c ****         ui16PWM->Adc4 =
+ 2139              		.loc 1 431 41 view .LVU576
+ 2140 007e 5688     		ldrh	r6, [r2, #2]
+ 431:Drivers/Radio/Src/Radio.c ****         ui16PWM->Adc4 =
+ 2141              		.loc 1 431 26 view .LVU577
+ 2142 0080 891B     		subs	r1, r1, r6
+ 431:Drivers/Radio/Src/Radio.c ****         ui16PWM->Adc4 =
+ 2143              		.loc 1 431 48 view .LVU578
+ 2144 0082 01F50061 		add	r1, r1, #2048
+ 431:Drivers/Radio/Src/Radio.c ****         ui16PWM->Adc4 =
+ 2145              		.loc 1 431 56 view .LVU579
+ 2146 0086 05FB01F1 		mul	r1, r5, r1
+ 431:Drivers/Radio/Src/Radio.c ****         ui16PWM->Adc4 =
+ 2147              		.loc 1 431 63 view .LVU580
+ 2148 008a 84FB016C 		smull	r6, ip, r4, r1
+ 2149 008e 0CEB0106 		add	r6, ip, r1
+ 2150 0092 4FEAE17C 		asr	ip, r1, #31
+ 2151 0096 CCEBE62C 		rsb	ip, ip, r6, asr #11
+ 431:Drivers/Radio/Src/Radio.c ****         ui16PWM->Adc4 =
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s 			page 52
+
+
+ 2152              		.loc 1 431 70 view .LVU581
+ 2153 009a AC44     		add	ip, ip, r5
+ 2154 009c 1FFA8CFC 		uxth	ip, ip
+ 430:Drivers/Radio/Src/Radio.c ****             (*(Temp + 1) - VrOffsetValue->Adc2 + 2048) * 1000 / 4095 + 1000;
+ 2155              		.loc 1 430 23 view .LVU582
+ 2156 00a0 A0F802C0 		strh	ip, [r0, #2]	@ movhi
+ 432:Drivers/Radio/Src/Radio.c ****             (*(Temp + 3) - VrOffsetValue->Adc4 + 2048) * 1000 / 4095 + 1000;
+ 2157              		.loc 1 432 9 is_stmt 1 view .LVU583
+ 433:Drivers/Radio/Src/Radio.c ****         ui16PWM->Adc3 =
+ 2158              		.loc 1 433 14 is_stmt 0 view .LVU584
+ 2159 00a4 D968     		ldr	r1, [r3, #12]
+ 433:Drivers/Radio/Src/Radio.c ****         ui16PWM->Adc3 =
+ 2160              		.loc 1 433 41 view .LVU585
+ 2161 00a6 D688     		ldrh	r6, [r2, #6]
+ 433:Drivers/Radio/Src/Radio.c ****         ui16PWM->Adc3 =
+ 2162              		.loc 1 433 26 view .LVU586
+ 2163 00a8 891B     		subs	r1, r1, r6
+ 433:Drivers/Radio/Src/Radio.c ****         ui16PWM->Adc3 =
+ 2164              		.loc 1 433 48 view .LVU587
+ 2165 00aa 01F50061 		add	r1, r1, #2048
+ 433:Drivers/Radio/Src/Radio.c ****         ui16PWM->Adc3 =
+ 2166              		.loc 1 433 56 view .LVU588
+ 2167 00ae 05FB01F1 		mul	r1, r5, r1
+ 433:Drivers/Radio/Src/Radio.c ****         ui16PWM->Adc3 =
+ 2168              		.loc 1 433 63 view .LVU589
+ 2169 00b2 84FB0176 		smull	r7, r6, r4, r1
+ 2170 00b6 0E44     		add	r6, r6, r1
+ 2171 00b8 C917     		asrs	r1, r1, #31
+ 2172 00ba C1EBE621 		rsb	r1, r1, r6, asr #11
+ 433:Drivers/Radio/Src/Radio.c ****         ui16PWM->Adc3 =
+ 2173              		.loc 1 433 70 view .LVU590
+ 2174 00be 2944     		add	r1, r1, r5
+ 2175 00c0 89B2     		uxth	r1, r1
+ 432:Drivers/Radio/Src/Radio.c ****             (*(Temp + 3) - VrOffsetValue->Adc4 + 2048) * 1000 / 4095 + 1000;
+ 2176              		.loc 1 432 23 view .LVU591
+ 2177 00c2 C180     		strh	r1, [r0, #6]	@ movhi
+ 434:Drivers/Radio/Src/Radio.c ****             (*(Temp + 2) - VrOffsetValue->Adc3 + 0) * 1000 / 4095 + 1000;
+ 2178              		.loc 1 434 9 is_stmt 1 view .LVU592
+ 435:Drivers/Radio/Src/Radio.c ****         if (ui16PWM->Adc1 < 1000)
+ 2179              		.loc 1 435 14 is_stmt 0 view .LVU593
+ 2180 00c4 9B68     		ldr	r3, [r3, #8]
+ 435:Drivers/Radio/Src/Radio.c ****         if (ui16PWM->Adc1 < 1000)
+ 2181              		.loc 1 435 41 view .LVU594
+ 2182 00c6 9288     		ldrh	r2, [r2, #4]
+ 2183              	.LVL219:
+ 435:Drivers/Radio/Src/Radio.c ****         if (ui16PWM->Adc1 < 1000)
+ 2184              		.loc 1 435 48 view .LVU595
+ 2185 00c8 9B1A     		subs	r3, r3, r2
+ 435:Drivers/Radio/Src/Radio.c ****         if (ui16PWM->Adc1 < 1000)
+ 2186              		.loc 1 435 53 view .LVU596
+ 2187 00ca 05FB03F3 		mul	r3, r5, r3
+ 435:Drivers/Radio/Src/Radio.c ****         if (ui16PWM->Adc1 < 1000)
+ 2188              		.loc 1 435 60 view .LVU597
+ 2189 00ce 84FB0324 		smull	r2, r4, r4, r3
+ 2190 00d2 1C44     		add	r4, r4, r3
+ 2191 00d4 DB17     		asrs	r3, r3, #31
+ 2192 00d6 C3EBE423 		rsb	r3, r3, r4, asr #11
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s 			page 53
+
+
+ 435:Drivers/Radio/Src/Radio.c ****         if (ui16PWM->Adc1 < 1000)
+ 2193              		.loc 1 435 67 view .LVU598
+ 2194 00da 2B44     		add	r3, r3, r5
+ 2195 00dc 9BB2     		uxth	r3, r3
+ 434:Drivers/Radio/Src/Radio.c ****             (*(Temp + 2) - VrOffsetValue->Adc3 + 0) * 1000 / 4095 + 1000;
+ 2196              		.loc 1 434 23 view .LVU599
+ 2197 00de 8380     		strh	r3, [r0, #4]	@ movhi
+ 436:Drivers/Radio/Src/Radio.c ****             ui16PWM->Adc1 = 1000;
+ 2198              		.loc 1 436 9 is_stmt 1 view .LVU600
+ 436:Drivers/Radio/Src/Radio.c ****             ui16PWM->Adc1 = 1000;
+ 2199              		.loc 1 436 12 is_stmt 0 view .LVU601
+ 2200 00e0 AE45     		cmp	lr, r5
+ 2201 00e2 1BD2     		bcs	.L150
+ 437:Drivers/Radio/Src/Radio.c ****         else if (ui16PWM->Adc1 > 2000)
+ 2202              		.loc 1 437 13 is_stmt 1 view .LVU602
+ 437:Drivers/Radio/Src/Radio.c ****         else if (ui16PWM->Adc1 > 2000)
+ 2203              		.loc 1 437 27 is_stmt 0 view .LVU603
+ 2204 00e4 0580     		strh	r5, [r0]	@ movhi
+ 2205              	.L151:
+ 440:Drivers/Radio/Src/Radio.c ****             ui16PWM->Adc2 = 1000;
+ 2206              		.loc 1 440 9 is_stmt 1 view .LVU604
+ 440:Drivers/Radio/Src/Radio.c ****             ui16PWM->Adc2 = 1000;
+ 2207              		.loc 1 440 12 is_stmt 0 view .LVU605
+ 2208 00e6 BCF57A7F 		cmp	ip, #1000
+ 2209 00ea 1ED2     		bcs	.L152
+ 441:Drivers/Radio/Src/Radio.c ****         else if (ui16PWM->Adc2 > 2000)
+ 2210              		.loc 1 441 13 is_stmt 1 view .LVU606
+ 441:Drivers/Radio/Src/Radio.c ****         else if (ui16PWM->Adc2 > 2000)
+ 2211              		.loc 1 441 27 is_stmt 0 view .LVU607
+ 2212 00ec 4FF47A72 		mov	r2, #1000
+ 2213 00f0 4280     		strh	r2, [r0, #2]	@ movhi
+ 2214              	.L153:
+ 444:Drivers/Radio/Src/Radio.c ****             ui16PWM->Adc3 = 1000;
+ 2215              		.loc 1 444 9 is_stmt 1 view .LVU608
+ 444:Drivers/Radio/Src/Radio.c ****             ui16PWM->Adc3 = 1000;
+ 2216              		.loc 1 444 12 is_stmt 0 view .LVU609
+ 2217 00f2 B3F57A7F 		cmp	r3, #1000
+ 2218 00f6 1FD2     		bcs	.L154
+ 445:Drivers/Radio/Src/Radio.c ****         else if (ui16PWM->Adc3 > 2000)
+ 2219              		.loc 1 445 13 is_stmt 1 view .LVU610
+ 445:Drivers/Radio/Src/Radio.c ****         else if (ui16PWM->Adc3 > 2000)
+ 2220              		.loc 1 445 27 is_stmt 0 view .LVU611
+ 2221 00f8 4FF47A73 		mov	r3, #1000
+ 2222 00fc 8380     		strh	r3, [r0, #4]	@ movhi
+ 2223              	.L155:
+ 448:Drivers/Radio/Src/Radio.c ****             ui16PWM->Adc4 = 1000;
+ 2224              		.loc 1 448 9 is_stmt 1 view .LVU612
+ 448:Drivers/Radio/Src/Radio.c ****             ui16PWM->Adc4 = 1000;
+ 2225              		.loc 1 448 12 is_stmt 0 view .LVU613
+ 2226 00fe B1F57A7F 		cmp	r1, #1000
+ 2227 0102 20D2     		bcs	.L156
+ 449:Drivers/Radio/Src/Radio.c ****         else if (ui16PWM->Adc4 > 2000)
+ 2228              		.loc 1 449 13 is_stmt 1 view .LVU614
+ 449:Drivers/Radio/Src/Radio.c ****         else if (ui16PWM->Adc4 > 2000)
+ 2229              		.loc 1 449 27 is_stmt 0 view .LVU615
+ 2230 0104 4FF47A73 		mov	r3, #1000
+ 2231 0108 C380     		strh	r3, [r0, #6]	@ movhi
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s 			page 54
+
+
+ 2232              	.L157:
+ 452:Drivers/Radio/Src/Radio.c ****         count = 0;
+ 2233              		.loc 1 452 9 is_stmt 1 view .LVU616
+ 2234 010a 134A     		ldr	r2, .L161+4
+ 2235 010c 0023     		movs	r3, #0
+ 2236 010e 1360     		str	r3, [r2]
+ 2237 0110 5360     		str	r3, [r2, #4]
+ 2238 0112 9360     		str	r3, [r2, #8]
+ 2239 0114 D360     		str	r3, [r2, #12]
+ 453:Drivers/Radio/Src/Radio.c ****     }
+ 2240              		.loc 1 453 9 view .LVU617
+ 453:Drivers/Radio/Src/Radio.c ****     }
+ 2241              		.loc 1 453 15 is_stmt 0 view .LVU618
+ 2242 0116 0F4A     		ldr	r2, .L161
+ 2243 0118 1360     		str	r3, [r2]
+ 2244 011a 83E7     		b	.L147
+ 2245              	.L150:
+ 438:Drivers/Radio/Src/Radio.c ****             ui16PWM->Adc1 = 2000;
+ 2246              		.loc 1 438 14 is_stmt 1 view .LVU619
+ 438:Drivers/Radio/Src/Radio.c ****             ui16PWM->Adc1 = 2000;
+ 2247              		.loc 1 438 17 is_stmt 0 view .LVU620
+ 2248 011c BEF5FA6F 		cmp	lr, #2000
+ 2249 0120 E1D9     		bls	.L151
+ 439:Drivers/Radio/Src/Radio.c ****         if (ui16PWM->Adc2 < 1000)
+ 2250              		.loc 1 439 13 is_stmt 1 view .LVU621
+ 439:Drivers/Radio/Src/Radio.c ****         if (ui16PWM->Adc2 < 1000)
+ 2251              		.loc 1 439 27 is_stmt 0 view .LVU622
+ 2252 0122 4FF4FA62 		mov	r2, #2000
+ 2253 0126 0280     		strh	r2, [r0]	@ movhi
+ 2254 0128 DDE7     		b	.L151
+ 2255              	.L152:
+ 442:Drivers/Radio/Src/Radio.c ****             ui16PWM->Adc2 = 2000;
+ 2256              		.loc 1 442 14 is_stmt 1 view .LVU623
+ 442:Drivers/Radio/Src/Radio.c ****             ui16PWM->Adc2 = 2000;
+ 2257              		.loc 1 442 17 is_stmt 0 view .LVU624
+ 2258 012a BCF5FA6F 		cmp	ip, #2000
+ 2259 012e E0D9     		bls	.L153
+ 443:Drivers/Radio/Src/Radio.c ****         if (ui16PWM->Adc3 < 1000)
+ 2260              		.loc 1 443 13 is_stmt 1 view .LVU625
+ 443:Drivers/Radio/Src/Radio.c ****         if (ui16PWM->Adc3 < 1000)
+ 2261              		.loc 1 443 27 is_stmt 0 view .LVU626
+ 2262 0130 4FF4FA62 		mov	r2, #2000
+ 2263 0134 4280     		strh	r2, [r0, #2]	@ movhi
+ 2264 0136 DCE7     		b	.L153
+ 2265              	.L154:
+ 446:Drivers/Radio/Src/Radio.c ****             ui16PWM->Adc3 = 2000;
+ 2266              		.loc 1 446 14 is_stmt 1 view .LVU627
+ 446:Drivers/Radio/Src/Radio.c ****             ui16PWM->Adc3 = 2000;
+ 2267              		.loc 1 446 17 is_stmt 0 view .LVU628
+ 2268 0138 B3F5FA6F 		cmp	r3, #2000
+ 2269 013c DFD9     		bls	.L155
+ 447:Drivers/Radio/Src/Radio.c ****         if (ui16PWM->Adc4 < 1000)
+ 2270              		.loc 1 447 13 is_stmt 1 view .LVU629
+ 447:Drivers/Radio/Src/Radio.c ****         if (ui16PWM->Adc4 < 1000)
+ 2271              		.loc 1 447 27 is_stmt 0 view .LVU630
+ 2272 013e 4FF4FA63 		mov	r3, #2000
+ 2273 0142 8380     		strh	r3, [r0, #4]	@ movhi
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s 			page 55
+
+
+ 2274 0144 DBE7     		b	.L155
+ 2275              	.L156:
+ 450:Drivers/Radio/Src/Radio.c ****             ui16PWM->Adc4 = 2000;
+ 2276              		.loc 1 450 14 is_stmt 1 view .LVU631
+ 450:Drivers/Radio/Src/Radio.c ****             ui16PWM->Adc4 = 2000;
+ 2277              		.loc 1 450 17 is_stmt 0 view .LVU632
+ 2278 0146 B1F5FA6F 		cmp	r1, #2000
+ 2279 014a DED9     		bls	.L157
+ 451:Drivers/Radio/Src/Radio.c ****         memset(Temp, 0, sizeof(uint32_t) * 4);
+ 2280              		.loc 1 451 13 is_stmt 1 view .LVU633
+ 451:Drivers/Radio/Src/Radio.c ****         memset(Temp, 0, sizeof(uint32_t) * 4);
+ 2281              		.loc 1 451 27 is_stmt 0 view .LVU634
+ 2282 014c 4FF4FA63 		mov	r3, #2000
+ 2283 0150 C380     		strh	r3, [r0, #6]	@ movhi
+ 2284 0152 DAE7     		b	.L157
+ 2285              	.L162:
+ 2286              		.align	2
+ 2287              	.L161:
+ 2288 0154 00000000 		.word	.LANCHOR2
+ 2289 0158 00000000 		.word	.LANCHOR3
+ 2290 015c 81000880 		.word	-2146959231
+ 2291              		.cfi_endproc
+ 2292              	.LFE89:
+ 2294              		.section	.text.Radio_Process,"ax",%progbits
+ 2295              		.align	1
+ 2296              		.global	Radio_Process
+ 2297              		.syntax unified
+ 2298              		.thumb
+ 2299              		.thumb_func
+ 2301              	Radio_Process:
+ 2302              	.LFB76:
+  88:Drivers/Radio/Src/Radio.c ****     static uint8_t DataFromFC[RADIO_MAX_CMD_LENGTH];
+ 2303              		.loc 1 88 31 is_stmt 1 view -0
+ 2304              		.cfi_startproc
+ 2305              		@ args = 0, pretend = 0, frame = 0
+ 2306              		@ frame_needed = 0, uses_anonymous_args = 0
+ 2307 0000 38B5     		push	{r3, r4, r5, lr}
+ 2308              	.LCFI23:
+ 2309              		.cfi_def_cfa_offset 16
+ 2310              		.cfi_offset 3, -16
+ 2311              		.cfi_offset 4, -12
+ 2312              		.cfi_offset 5, -8
+ 2313              		.cfi_offset 14, -4
+  89:Drivers/Radio/Src/Radio.c ****     uint8_t *Buffer;
+ 2314              		.loc 1 89 5 view .LVU636
+  90:Drivers/Radio/Src/Radio.c ****     Buffer = malloc(33);
+ 2315              		.loc 1 90 5 view .LVU637
+  91:Drivers/Radio/Src/Radio.c ****     memset(Buffer, '\0', 33);
+ 2316              		.loc 1 91 5 view .LVU638
+  91:Drivers/Radio/Src/Radio.c ****     memset(Buffer, '\0', 33);
+ 2317              		.loc 1 91 14 is_stmt 0 view .LVU639
+ 2318 0002 2120     		movs	r0, #33
+ 2319 0004 FFF7FEFF 		bl	malloc
+ 2320              	.LVL220:
+ 2321 0008 0446     		mov	r4, r0
+ 2322              	.LVL221:
+  92:Drivers/Radio/Src/Radio.c ****     // Process the Adc value
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s 			page 56
+
+
+ 2323              		.loc 1 92 5 is_stmt 1 view .LVU640
+ 2324 000a 2122     		movs	r2, #33
+ 2325 000c 0021     		movs	r1, #0
+ 2326 000e FFF7FEFF 		bl	memset
+ 2327              	.LVL222:
+  94:Drivers/Radio/Src/Radio.c ****                   &RadioHandler->AdcOffset);
+ 2328              		.loc 1 94 5 view .LVU641
+  94:Drivers/Radio/Src/Radio.c ****                   &RadioHandler->AdcOffset);
+ 2329              		.loc 1 94 32 is_stmt 0 view .LVU642
+ 2330 0012 1F4B     		ldr	r3, .L167
+ 2331 0014 1868     		ldr	r0, [r3]
+  94:Drivers/Radio/Src/Radio.c ****                   &RadioHandler->AdcOffset);
+ 2332              		.loc 1 94 5 view .LVU643
+ 2333 0016 00F14802 		add	r2, r0, #72
+ 2334 001a 016D     		ldr	r1, [r0, #80]
+ 2335 001c 4030     		adds	r0, r0, #64
+ 2336 001e FFF7FEFF 		bl	Calculate_PWM
+ 2337              	.LVL223:
+  97:Drivers/Radio/Src/Radio.c ****     if (Available > 0) {
+ 2338              		.loc 1 97 5 is_stmt 1 view .LVU644
+  97:Drivers/Radio/Src/Radio.c ****     if (Available > 0) {
+ 2339              		.loc 1 97 21 is_stmt 0 view .LVU645
+ 2340 0022 2021     		movs	r1, #32
+ 2341 0024 2046     		mov	r0, r4
+ 2342 0026 FFF7FEFF 		bl	Radio_Get_String
+ 2343              	.LVL224:
+  98:Drivers/Radio/Src/Radio.c ****         if (NRF24_write(Buffer, Available)) {
+ 2344              		.loc 1 98 5 is_stmt 1 view .LVU646
+  98:Drivers/Radio/Src/Radio.c ****         if (NRF24_write(Buffer, Available)) {
+ 2345              		.loc 1 98 8 is_stmt 0 view .LVU647
+ 2346 002a 0028     		cmp	r0, #0
+  98:Drivers/Radio/Src/Radio.c ****         if (NRF24_write(Buffer, Available)) {
+ 2347              		.loc 1 98 8 view .LVU648
+ 2348 002c 04DC     		bgt	.L166
+ 2349              	.LVL225:
+ 2350              	.L164:
+ 114:Drivers/Radio/Src/Radio.c ****     return RADIO_OK;
+ 2351              		.loc 1 114 5 is_stmt 1 view .LVU649
+ 2352 002e 2046     		mov	r0, r4
+ 2353 0030 FFF7FEFF 		bl	free
+ 2354              	.LVL226:
+ 115:Drivers/Radio/Src/Radio.c **** }
+ 2355              		.loc 1 115 5 view .LVU650
+ 116:Drivers/Radio/Src/Radio.c **** 
+ 2356              		.loc 1 116 1 is_stmt 0 view .LVU651
+ 2357 0034 0020     		movs	r0, #0
+ 2358 0036 38BD     		pop	{r3, r4, r5, pc}
+ 2359              	.LVL227:
+ 2360              	.L166:
+  99:Drivers/Radio/Src/Radio.c ****             // Successfully transmission
+ 2361              		.loc 1 99 9 is_stmt 1 view .LVU652
+  99:Drivers/Radio/Src/Radio.c ****             // Successfully transmission
+ 2362              		.loc 1 99 13 is_stmt 0 view .LVU653
+ 2363 0038 C1B2     		uxtb	r1, r0
+ 2364 003a 2046     		mov	r0, r4
+ 2365              	.LVL228:
+  99:Drivers/Radio/Src/Radio.c ****             // Successfully transmission
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s 			page 57
+
+
+ 2366              		.loc 1 99 13 view .LVU654
+ 2367 003c FFF7FEFF 		bl	NRF24_write
+ 2368              	.LVL229:
+  99:Drivers/Radio/Src/Radio.c ****             // Successfully transmission
+ 2369              		.loc 1 99 12 view .LVU655
+ 2370 0040 0028     		cmp	r0, #0
+ 2371 0042 F4D0     		beq	.L164
+ 101:Drivers/Radio/Src/Radio.c ****                 memset(Buffer, '\0', 33);
+ 2372              		.loc 1 101 13 is_stmt 1 view .LVU656
+ 101:Drivers/Radio/Src/Radio.c ****                 memset(Buffer, '\0', 33);
+ 2373              		.loc 1 101 17 is_stmt 0 view .LVU657
+ 2374 0044 FFF7FEFF 		bl	NRF24_isAckPayloadAvailable
+ 2375              	.LVL230:
+ 101:Drivers/Radio/Src/Radio.c ****                 memset(Buffer, '\0', 33);
+ 2376              		.loc 1 101 16 view .LVU658
+ 2377 0048 0028     		cmp	r0, #0
+ 2378 004a F0D0     		beq	.L164
+ 102:Drivers/Radio/Src/Radio.c ****                 NRF24_read(Buffer, 32);
+ 2379              		.loc 1 102 17 is_stmt 1 view .LVU659
+ 2380 004c 2122     		movs	r2, #33
+ 2381 004e 0021     		movs	r1, #0
+ 2382 0050 2046     		mov	r0, r4
+ 2383 0052 FFF7FEFF 		bl	memset
+ 2384              	.LVL231:
+ 103:Drivers/Radio/Src/Radio.c ****                 strcat((char *)DataFromFC, (char *)Buffer);
+ 2385              		.loc 1 103 17 view .LVU660
+ 2386 0056 2021     		movs	r1, #32
+ 2387 0058 2046     		mov	r0, r4
+ 2388 005a FFF7FEFF 		bl	NRF24_read
+ 2389              	.LVL232:
+ 104:Drivers/Radio/Src/Radio.c ****                 // Process data from FC
+ 2390              		.loc 1 104 17 view .LVU661
+ 2391 005e 0D4D     		ldr	r5, .L167+4
+ 2392 0060 2146     		mov	r1, r4
+ 2393 0062 2846     		mov	r0, r5
+ 2394 0064 FFF7FEFF 		bl	strcat
+ 2395              	.LVL233:
+ 106:Drivers/Radio/Src/Radio.c ****                     0) {
+ 2396              		.loc 1 106 17 view .LVU662
+ 106:Drivers/Radio/Src/Radio.c ****                     0) {
+ 2397              		.loc 1 106 21 is_stmt 0 view .LVU663
+ 2398 0068 2846     		mov	r0, r5
+ 2399 006a FFF7FEFF 		bl	strlen
+ 2400              	.LVL234:
+ 2401 006e 0246     		mov	r2, r0
+ 2402 0070 0A21     		movs	r1, #10
+ 2403 0072 2846     		mov	r0, r5
+ 2404 0074 FFF7FEFF 		bl	IndexOf
+ 2405              	.LVL235:
+ 106:Drivers/Radio/Src/Radio.c ****                     0) {
+ 2406              		.loc 1 106 20 view .LVU664
+ 2407 0078 0028     		cmp	r0, #0
+ 2408 007a D8DB     		blt	.L164
+ 108:Drivers/Radio/Src/Radio.c ****                     memset(DataFromFC, '\0', RADIO_MAX_CMD_LENGTH);
+ 2409              		.loc 1 108 21 is_stmt 1 view .LVU665
+ 2410 007c 2846     		mov	r0, r5
+ 2411 007e FFF7FEFF 		bl	Radio_Process_From_FC
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s 			page 58
+
+
+ 2412              	.LVL236:
+ 109:Drivers/Radio/Src/Radio.c ****                 }
+ 2413              		.loc 1 109 21 view .LVU666
+ 2414 0082 4FF48072 		mov	r2, #256
+ 2415 0086 0021     		movs	r1, #0
+ 2416 0088 2846     		mov	r0, r5
+ 2417 008a FFF7FEFF 		bl	memset
+ 2418              	.LVL237:
+ 2419 008e CEE7     		b	.L164
+ 2420              	.L168:
+ 2421              		.align	2
+ 2422              	.L167:
+ 2423 0090 00000000 		.word	.LANCHOR0
+ 2424 0094 00000000 		.word	.LANCHOR4
+ 2425              		.cfi_endproc
+ 2426              	.LFE76:
+ 2428              		.global	TxpipeAddrs
+ 2429              		.global	RadioHandler
+ 2430              		.section	.bss.DataFromFC.2,"aw",%nobits
+ 2431              		.align	2
+ 2432              		.set	.LANCHOR4,. + 0
+ 2435              	DataFromFC.2:
+ 2436 0000 00000000 		.space	256
+ 2436      00000000 
+ 2436      00000000 
+ 2436      00000000 
+ 2436      00000000 
+ 2437              		.section	.bss.RadioHandler,"aw",%nobits
+ 2438              		.align	2
+ 2439              		.set	.LANCHOR0,. + 0
+ 2442              	RadioHandler:
+ 2443 0000 00000000 		.space	4
+ 2444              		.section	.bss.Temp.0,"aw",%nobits
+ 2445              		.align	2
+ 2446              		.set	.LANCHOR3,. + 0
+ 2449              	Temp.0:
+ 2450 0000 00000000 		.space	16
+ 2450      00000000 
+ 2450      00000000 
+ 2450      00000000 
+ 2451              		.section	.data.TxpipeAddrs,"aw"
+ 2452              		.align	3
+ 2453              		.set	.LANCHOR1,. + 0
+ 2456              	TxpipeAddrs:
+ 2457 0000 AA443322 		.word	573785258
+ 2458 0004 11000000 		.word	17
+ 2459              		.section	.data.count.1,"aw"
+ 2460              		.align	2
+ 2461              		.set	.LANCHOR2,. + 0
+ 2464              	count.1:
+ 2465 0000 01000000 		.word	1
+ 2466              		.text
+ 2467              	.Letext0:
+ 2468              		.file 2 "c:\\program files (x86)\\gnu arm embedded toolchain\\10 2021.10\\arm-none-eabi\\include\\
+ 2469              		.file 3 "c:\\program files (x86)\\gnu arm embedded toolchain\\10 2021.10\\arm-none-eabi\\include\\
+ 2470              		.file 4 "Drivers/CMSIS/Device/ST/STM32F2xx/Include/stm32f205xx.h"
+ 2471              		.file 5 "Drivers/STM32F2xx_HAL_Driver/Inc/stm32f2xx_hal_def.h"
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s 			page 59
+
+
+ 2472              		.file 6 "Drivers/STM32F2xx_HAL_Driver/Inc/stm32f2xx_hal_dma.h"
+ 2473              		.file 7 "Drivers/STM32F2xx_HAL_Driver/Inc/stm32f2xx_hal_spi.h"
+ 2474              		.file 8 "Drivers/STM32F2xx_HAL_Driver/Inc/stm32f2xx_hal_uart.h"
+ 2475              		.file 9 "Drivers/Radio/Inc/MY_NRF24.h"
+ 2476              		.file 10 "Drivers/RingBuffer/Inc/uartRingBufDMA.h"
+ 2477              		.file 11 "Drivers/Radio/Inc/RemoteControl.h"
+ 2478              		.file 12 "Drivers/OLED/Inc/Oled.h"
+ 2479              		.file 13 "Drivers/Radio/Inc/Radio.h"
+ 2480              		.file 14 "Drivers/STM32F2xx_HAL_Driver/Inc/stm32f2xx_hal.h"
+ 2481              		.file 15 "Drivers/STM32F2xx_HAL_Driver/Inc/stm32f2xx_hal_gpio.h"
+ 2482              		.file 16 "c:\\program files (x86)\\gnu arm embedded toolchain\\10 2021.10\\arm-none-eabi\\include\
+ 2483              		.file 17 "c:\\program files (x86)\\gnu arm embedded toolchain\\10 2021.10\\arm-none-eabi\\include\
+ 2484              		.file 18 "<built-in>"
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s 			page 60
+
+
+DEFINED SYMBOLS
+                            *ABS*:00000000 Radio.c
+C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s:18     .text.Radio_Init:00000000 $t
+C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s:24     .text.Radio_Init:00000000 Radio_Init
+C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s:173    .text.Radio_Init:000000d0 $d
+C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s:179    .text.Radio_Control_Parse:00000000 $t
+C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s:185    .text.Radio_Control_Parse:00000000 Radio_Control_Parse
+C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s:267    .rodata.Radio_Decode_CMD.str1.4:00000000 $d
+C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s:283    .text.Radio_Decode_CMD:00000000 $t
+C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s:289    .text.Radio_Decode_CMD:00000000 Radio_Decode_CMD
+C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s:427    .text.Radio_Decode_CMD:00000098 $d
+C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s:437    .rodata.Radio_Decode_PID.str1.4:00000000 $d
+C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s:487    .text.Radio_Decode_PID:00000000 $t
+C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s:493    .text.Radio_Decode_PID:00000000 Radio_Decode_PID
+C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s:884    .text.Radio_Decode_PID:00000218 $d
+C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s:905    .rodata.Radio_Decode_Ack.str1.4:00000000 $d
+C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s:928    .text.Radio_Decode_Ack:00000000 $t
+C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s:934    .text.Radio_Decode_Ack:00000000 Radio_Decode_Ack
+C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s:1201   .text.Radio_Decode_Ack:00000158 $d
+C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s:1216   .rodata.Radio_Decode_Mode.str1.4:00000000 $d
+C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s:1220   .text.Radio_Decode_Mode:00000000 $t
+C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s:1226   .text.Radio_Decode_Mode:00000000 Radio_Decode_Mode
+C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s:1270   .text.Radio_Decode_Mode:00000020 $d
+C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s:1276   .text.Radio_Process_From_FC:00000000 $t
+C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s:1282   .text.Radio_Process_From_FC:00000000 Radio_Process_From_FC
+C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s:1391   .text.Radio_Process_From_FC:00000070 $d
+C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s:1399   .text.Radio_Put_String:00000000 $t
+C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s:1405   .text.Radio_Put_String:00000000 Radio_Put_String
+C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s:1583   .text.Radio_Put_String:000000a4 $d
+C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s:1588   .text.Radio_Remain:00000000 $t
+C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s:1594   .text.Radio_Remain:00000000 Radio_Remain
+C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s:1629   .text.Radio_Remain:00000014 $d
+C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s:1634   .text.Radio_available:00000000 $t
+C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s:1640   .text.Radio_available:00000000 Radio_available
+C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s:1695   .text.Radio_available:00000020 $d
+C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s:1700   .text.Radio_Increase_Pointer:00000000 $t
+C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s:1706   .text.Radio_Increase_Pointer:00000000 Radio_Increase_Pointer
+C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s:1741   .text.Radio_Get_String:00000000 $t
+C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s:1747   .text.Radio_Get_String:00000000 Radio_Get_String
+C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s:1867   .text.Radio_Get_String:00000068 $d
+C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s:1872   .text.Varires_Calib:00000000 $t
+C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s:1878   .text.Varires_Calib:00000000 Varires_Calib
+C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s:2002   .text.Varires_Calib:00000074 $d
+C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s:2007   .text.Calculate_PWM:00000000 $t
+C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s:2013   .text.Calculate_PWM:00000000 Calculate_PWM
+C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s:2288   .text.Calculate_PWM:00000154 $d
+C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s:2295   .text.Radio_Process:00000000 $t
+C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s:2301   .text.Radio_Process:00000000 Radio_Process
+C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s:2423   .text.Radio_Process:00000090 $d
+C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s:2456   .data.TxpipeAddrs:00000000 TxpipeAddrs
+C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s:2442   .bss.RadioHandler:00000000 RadioHandler
+C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s:2431   .bss.DataFromFC.2:00000000 $d
+C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s:2435   .bss.DataFromFC.2:00000000 DataFromFC.2
+C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s:2438   .bss.RadioHandler:00000000 $d
+C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s:2445   .bss.Temp.0:00000000 $d
+C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s:2449   .bss.Temp.0:00000000 Temp.0
+C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s:2452   .data.TxpipeAddrs:00000000 $d
+ARM GAS  C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s 			page 61
+
+
+C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s:2460   .data.count.1:00000000 $d
+C:\Users\sangt\AppData\Local\Temp\ccLFKo1x.s:2464   .data.count.1:00000000 count.1
+
+UNDEFINED SYMBOLS
+NRF24_begin
+nrf24_DebugUART_Init
+NRF24_stopListening
+NRF24_openWritingPipe
+NRF24_setChannel
+NRF24_setAutoAck
+NRF24_setPayloadSize
+NRF24_setPALevel
+NRF24_setDataRate
+NRF24_setRetries
+NRF24_enableAckPayload
+NRF24_enableDynamicPayloads
+printRadioSettings
+strtok
+strcpy
+free
+strcmp
+atoi
+__aeabi_d2f
+atof
+__aeabi_d2iz
+strlen
+IndexOf
+HAL_UART_Transmit
+memcpy
+memmove
+HAL_Delay
+HAL_GPIO_TogglePin
+malloc
+memset
+NRF24_write
+NRF24_isAckPayloadAvailable
+NRF24_read
+strcat
