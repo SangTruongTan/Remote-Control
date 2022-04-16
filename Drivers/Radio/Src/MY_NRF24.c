@@ -24,10 +24,6 @@ by this software, read more about this on the GNU General Public License.
 // List of header files
 #include "MY_NRF24.h"
 
-#include <stdio.h>
-
-#include "main.h"
-
 //*** Variables declaration ***//
 #define MAX(x, y) (((x) > (y)) ? (x) : (y))
 #define MIN(x, y) (((x) < (y)) ? (x) : (y))
@@ -51,6 +47,12 @@ static uint16_t nrf24_CSN_PIN;
 static uint16_t nrf24_CE_PIN;
 // SPI handle
 static SPI_HandleTypeDef nrf24_hspi;
+// Wait and GetTick Function
+void (*wait)(uint32_t);
+uint32_t (*getTick)();
+// Timeout of the transmission
+uint32_t Timeout = 40;
+
 // Debugging UART handle
 static UART_HandleTypeDef nrf24_huart;
 
@@ -168,8 +170,16 @@ uint8_t NRF24_get_status(void) {
 }
 
 // 12. Begin function
-void NRF24_begin(GPIO_TypeDef *nrf24PORT, uint16_t nrfCSN_Pin,
-                 uint16_t nrfCE_Pin, SPI_HandleTypeDef nrfSPI) {
+void NRF24_begin(NRF24_Init_t Init) {
+    SPI_HandleTypeDef nrfSPI = *Init.hspi;
+    GPIO_TypeDef *nrf24PORT = Init.Port;
+    uint16_t nrfCSN_Pin = Init.CSN_Pin;
+    uint16_t nrfCE_Pin = Init.CE_Pin;
+    wait = Init.wait;
+    getTick = Init.getTick;
+    if (Init.Timeout != 0) {
+        Timeout = Init.Timeout;
+    }
     // Copy SPI handle variable
     memcpy(&nrf24_hspi, &nrfSPI, sizeof(nrfSPI));
     // Copy Pins and Port variables
@@ -181,7 +191,7 @@ void NRF24_begin(GPIO_TypeDef *nrf24PORT, uint16_t nrfCSN_Pin,
     NRF24_csn(1);
     NRF24_ce(0);
     // 5 ms initial delay
-    HAL_Delay(5);
+    wait(5);
 
     //**** Soft Reset Registers default values ****//
     NRF24_write_register(0x00, 0x08);
@@ -227,8 +237,7 @@ void NRF24_begin(GPIO_TypeDef *nrf24PORT, uint16_t nrfCSN_Pin,
     NRF24_ACTIVATE_cmd();
     NRF24_write_register(0x1c, 0);
     NRF24_write_register(0x1d, 0);
-    // printRadioSettings();
-    // Initialise retries 15 and delay 4000 usec
+    // Initialise retries 15 and delay 1250 usec
     NRF24_setRetries(15, 15);
     // Initialise PA level to max (0dB)
     NRF24_setPALevel(RF24_PA_0dB);
@@ -248,9 +257,8 @@ void NRF24_begin(GPIO_TypeDef *nrf24PORT, uint16_t nrfCSN_Pin,
     // Flush buffers
     NRF24_flush_tx();
     NRF24_flush_rx();
-    // Go to standby I state
-    NRF24_powerUp();
-    HAL_Delay(5);
+
+    NRF24_powerDown();
 }
 // 13. Listen on open pipes for reading (Must call NRF24_openReadingPipe()
 // first)
@@ -286,16 +294,14 @@ bool NRF24_write(const void *buf, uint8_t len) {
     // Data monitor
     uint8_t observe_tx;
     uint8_t status;
-    uint32_t sent_at = HAL_GetTick();
-    const uint32_t timeout = 40;  // ms to wait for timeout
+    uint32_t sent_at = getTick();
+    const uint32_t timeout = Timeout;  // ms to wait for timeout
     do {
         NRF24_read_registerN(REG_OBSERVE_TX, &observe_tx, 1);
-        printf("Retransmition:%d\r\n", observe_tx & 0x0F);
-        printf("Total Lost:%d\r\n", (observe_tx & 0xF0) >> 4);
         // Get status register
         status = NRF24_get_status();
-    } while ((!(status & (_BV(BIT_TX_DS) | _BV(BIT_MAX_RT)))) &&
-             (HAL_GetTick() - sent_at < timeout));
+    } while (!(status & (_BV(BIT_TX_DS) | _BV(BIT_MAX_RT))) &&
+             (getTick() - sent_at < timeout));
 
     //	printConfigReg();
     //	printStatusReg();
@@ -308,7 +314,6 @@ bool NRF24_write(const void *buf, uint8_t len) {
     }
 
     // Power down
-    NRF24_ce(0);
     NRF24_available();
     NRF24_flush_tx();
     return retStatus;
@@ -604,10 +609,12 @@ void NRF24_startWrite(const void *buf, uint8_t len) {
     NRF24_write_register(REG_CONFIG,
                          (NRF24_read_register(REG_CONFIG) | _BV(BIT_PWR_UP)) &
                              ~_BV(BIT_PRIM_RX));
-    // Send the payload
     NRF24_ce(1);
     NRF24_DelayMicroSeconds(150);
+
+    // Send the payload
     NRF24_write_payload(buf, len);
+
     // Enable Tx for 15usec
     NRF24_ce(1);
     NRF24_DelayMicroSeconds(15);

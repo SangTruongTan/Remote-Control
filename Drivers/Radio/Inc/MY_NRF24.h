@@ -23,6 +23,7 @@ by this software, read more about this on the GNU General Public License.
 
 // List of header files
 #include <stdbool.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -60,6 +61,17 @@ static const uint8_t NRF24_ADDR_REGS[7] = {
 static const uint8_t RF24_RX_PW_PIPE[6] = {REG_RX_PW_P0, REG_RX_PW_P1,
                                            REG_RX_PW_P2, REG_RX_PW_P3,
                                            REG_RX_PW_P4, REG_RX_PW_P5};
+// 6. Init Typedef
+typedef struct NRF24_Init_t {
+    GPIO_TypeDef* Port;
+    uint16_t CE_Pin;
+    uint16_t CSN_Pin;
+    SPI_HandleTypeDef* hspi;
+    void (*wait)(uint32_t);
+    uint32_t (*getTick)();
+    uint32_t Timeout;
+} NRF24_Init_t;
+
 //**** Functions prototypes ****//
 // Microsecond delay function
 void NRF24_DelayMicroSeconds(uint32_t uSec);
@@ -88,8 +100,7 @@ void NRF24_flush_rx(void);
 uint8_t NRF24_get_status(void);
 
 // 12. Begin function
-void NRF24_begin(GPIO_TypeDef* nrf24PORT, uint16_t nrfCSN_Pin,
-                 uint16_t nrfCE_Pin, SPI_HandleTypeDef nrfSPI);
+void NRF24_begin(NRF24_Init_t Init);
 // 13. Listen on open pipes for reading (Must call NRF24_openReadingPipe()
 // first)
 void NRF24_startListening(void);
