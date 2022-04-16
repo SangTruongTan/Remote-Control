@@ -18,6 +18,7 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "cmsis_os.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -27,6 +28,15 @@
 #include "Oled.h"
 #include "Radio.h"
 #include "uartRingBufDMA.h"
+
+// FreeRTOS
+#include "FreeRTOS.h"
+#include "event_groups.h"
+#include "queue.h"
+#include "semphr.h"
+#include "stdio.h"
+#include "task.h"
+#include "timers.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -55,6 +65,7 @@ UART_HandleTypeDef huart3;
 DMA_HandleTypeDef hdma_usart3_rx;
 DMA_HandleTypeDef hdma_usart3_tx;
 
+osThreadId defaultTaskHandle;
 /* USER CODE BEGIN PV */
 
 RingBuffer_t Ring;
@@ -62,6 +73,12 @@ RadioHandler_t Radio;
 OLEDHandle_t Oled;
 
 uint16_t ADCValue[4];
+
+// Task Handle
+TaskHandle_t RadioTask;
+TaskHandle_t DisplayTask;
+TaskHandle_t CalculateTask;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -72,11 +89,19 @@ static void MX_SPI3_Init(void);
 static void MX_DMA_Init(void);
 static void MX_USART3_UART_Init(void);
 static void MX_ADC2_Init(void);
+void StartDefaultTask(void const * argument);
+
 /* USER CODE BEGIN PFP */
 void Init_Task(void *pvParameters);
 void Display_Task(void *pvParameters);
 void Radio_Task(void *pvParameters);
 void ReadData_Task(void *pvParameters);
+
+// RTOS
+void Radio_Task(void *pvParameters);
+void Display_Task(void *pvParameters);
+void Calculate_Task(void *pvParameters);
+
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -140,11 +165,19 @@ int main(void)
     Radio.Init.Display = &Oled.Display;
     Radio.Init.ADCValue = ADCValue;
     Radio_Init(&Radio, Radio.Init);
-    // HAL_GPIO_WritePin(Buzz_GPIO_Port, Buzz_Pin, GPIO_PIN_SET);
-    // HAL_Delay(50);
-    Varires_Calib(&Radio.AdcOffset, ADCValue, 100);
-    HAL_GPIO_WritePin(Buzz_GPIO_Port, Buzz_Pin, GPIO_PIN_RESET);
-    uint8_t Buffer[100];
+
+    // Put Adc offset or Calibration
+    Radio.AdcOffset.Adc1 = 2059;
+    Radio.AdcOffset.Adc2 = 2181;
+    Radio.AdcOffset.Adc3 = 289;
+    Radio.AdcOffset.Adc4 = 1961;
+    // Varires_Calib(&Radio.AdcOffset, ADCValue, 100);
+
+    // For RTOS
+    xTaskCreate(Radio_Task, "Radio", 512, NULL, 2, RadioTask);
+    xTaskCreate(Calculate_Task, "Calculate", 256, NULL, 2, CalculateTask);
+    xTaskCreate(Display_Task, "Display", 256, NULL, 1, DisplayTask);
+    vTaskStartScheduler();
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -153,14 +186,6 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-        uint32_t Start = HAL_GetTick();
-        Radio_Task(NULL);
-        sprintf((char *)Buffer, "ADC:Ch1,%d,Ch2,%d,Ch3,%d,Ch4,%d\r\n", Radio.PWMValue.Adc1,
-               Radio.PWMValue.Adc2, Radio.PWMValue.Adc3, Radio.PWMValue.Adc4);
-        HAL_UART_Transmit_DMA(&huart3, Buffer, strlen((char *)Buffer));
-        uint32_t Stop = HAL_GetTick();
-        printf("Time:%ld\r\n", Stop - Start);
-        HAL_Delay(20);
     }
   /* USER CODE END 3 */
 }
@@ -182,7 +207,7 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
   RCC_OscInitStruct.PLL.PLLM = 4;
-  RCC_OscInitStruct.PLL.PLLN = 216;
+  RCC_OscInitStruct.PLL.PLLN = 192;
   RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV6;
   RCC_OscInitStruct.PLL.PLLQ = 4;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
@@ -395,13 +420,13 @@ static void MX_DMA_Init(void)
 
   /* DMA interrupt init */
   /* DMA1_Stream1_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(DMA1_Stream1_IRQn, 0, 0);
+  HAL_NVIC_SetPriority(DMA1_Stream1_IRQn, 5, 0);
   HAL_NVIC_EnableIRQ(DMA1_Stream1_IRQn);
   /* DMA1_Stream3_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(DMA1_Stream3_IRQn, 0, 0);
+  HAL_NVIC_SetPriority(DMA1_Stream3_IRQn, 5, 0);
   HAL_NVIC_EnableIRQ(DMA1_Stream3_IRQn);
   /* DMA2_Stream3_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(DMA2_Stream3_IRQn, 0, 0);
+  HAL_NVIC_SetPriority(DMA2_Stream3_IRQn, 5, 0);
   HAL_NVIC_EnableIRQ(DMA2_Stream3_IRQn);
 
 }
@@ -485,30 +510,70 @@ int _write(int file, char *outgoing, int len) {
     return len;
 }
 
-void Init_Task(void *pvParameters) {}
-
 void Display_Task(void *pvParameters) {
     for (;;) {
     }
 }
 
 void Radio_Task(void *pvParameters) {
-  static int count = 1;
+    TickType_t StartTask = xTaskGetTickCount();
     char Data[50];
-    sprintf(Data, "CMD,T,%d,R,%d,P,%d,Y,%d\n", Radio.PWMValue.Adc3,
-            Radio.PWMValue.Adc2, Radio.PWMValue.Adc1, Radio.PWMValue.Adc4);
-    Calculate_PWM(&Radio.PWMValue, Radio.ADCValue, &Radio.AdcOffset);
-    if(count > 5) {
-      if (Radio_Remain() > strlen(Data)) Radio_Put_String(Data);
-      Radio_Process();
-      count = 0;
+    for (;;) {
+        sprintf(Data, "CMD,T,%d,R,%d,P,%d,Y,%d\n", Radio.PWMValue.Adc3,
+                Radio.PWMValue.Adc2, Radio.PWMValue.Adc1, Radio.PWMValue.Adc4);
+        if (Radio_Remain() > strlen(Data)) Radio_Put_String(Data);
+        Radio_Process();
+        vTaskDelayUntil(&StartTask, 10);
     }
-    count ++;
 }
 
-void ReadData_Task(void *pvParameters) {}
+void Calculate_Task(void *pvParameters) {
+    TickType_t StartTask = xTaskGetTickCount();
+    for (;;) {
+        Calculate_PWM(&Radio.PWMValue, Radio.ADCValue, &Radio.AdcOffset);
+        vTaskDelayUntil(&StartTask, 2);
+    }
+}
 
 /* USER CODE END 4 */
+
+/* USER CODE BEGIN Header_StartDefaultTask */
+/**
+ * @brief  Function implementing the defaultTask thread.
+ * @param  argument: Not used
+ * @retval None
+ */
+/* USER CODE END Header_StartDefaultTask */
+void StartDefaultTask(void const * argument)
+{
+  /* USER CODE BEGIN 5 */
+    /* Infinite loop */
+    for (;;) {
+        osDelay(1);
+    }
+  /* USER CODE END 5 */
+}
+
+/**
+  * @brief  Period elapsed callback in non blocking mode
+  * @note   This function is called  when TIM5 interrupt took place, inside
+  * HAL_TIM_IRQHandler(). It makes a direct call to HAL_IncTick() to increment
+  * a global variable "uwTick" used as application time base.
+  * @param  htim : TIM handle
+  * @retval None
+  */
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+  /* USER CODE BEGIN Callback 0 */
+
+  /* USER CODE END Callback 0 */
+  if (htim->Instance == TIM5) {
+    HAL_IncTick();
+  }
+  /* USER CODE BEGIN Callback 1 */
+
+  /* USER CODE END Callback 1 */
+}
 
 /**
   * @brief  This function is executed in case of error occurrence.
