@@ -57,11 +57,13 @@ typedef enum RadioStatus_t {
     RADIO_OK = 0U,
     RADIO_EMPTY = 1U,
     RADIO_FULL = 2U,
+    RADIO_FAIL = 3U,
 } RadioStatus_t;
 
 typedef struct RadioHandler_t {
     RadioInit_t Init;
     RadioStatus_t Status;
+    RadioState_t State;
     RingHandler_t *Serial;
     RingHandler_t *Debug;
     bool enableDebug;

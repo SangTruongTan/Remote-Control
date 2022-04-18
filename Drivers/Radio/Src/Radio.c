@@ -73,9 +73,9 @@ void Radio_Init(RadioHandler_t *Handle, RadioInit_t Init) {
     NRF24_setChannel(12);
     NRF24_setAutoAck(true);
     NRF24_setPayloadSize(32);
-    NRF24_setPALevel(RF24_PA_m18dB);
+    NRF24_setPALevel(RF24_PA_m6dB);
     NRF24_setDataRate(RF24_2MBPS);
-    NRF24_setRetries(0x07, 15);  // Delay 1250us and 15 times
+    NRF24_setRetries(0x03, 5);  // Delay 1000us and 5 times
     NRF24_enableAckPayload();
     NRF24_enableDynamicPayloads();
     printRadioSettings();
@@ -86,6 +86,7 @@ void Radio_Init(RadioHandler_t *Handle, RadioInit_t Init) {
  * @retval RadioStatus_t
  */
 RadioStatus_t Radio_Process() {
+    static uint32_t count = 0;
     static uint8_t DataFromFC[RADIO_MAX_CMD_LENGTH];
     uint8_t *Buffer;
     Buffer = malloc(33);
@@ -109,6 +110,14 @@ RadioStatus_t Radio_Process() {
                     memset(DataFromFC, '\0', RADIO_MAX_CMD_LENGTH);
                 }
             }
+            count = 0;
+            RadioHandler->Display->RadioState = ALIVE;
+        } else {
+            count ++;
+        }
+        if(count > 50) {
+            count = 50;
+            RadioHandler->Display->RadioState = DEAD;
         }
     }
     free(Buffer);
@@ -127,6 +136,7 @@ void Radio_Process_From_FC(uint8_t *Buffer) {
     }
     if (IndexOf(Buffer, '\n', strlen((char *)Buffer)) > 0) {
         uint8_t Struct[ROWS][COLUMNS];
+        memset(Struct, '\0', ROWS * COLUMNS);
         // Put the process with the Parse string function
         Radio_Control_Parse(Struct, Buffer, ',');
         if (strcmp((const char *)&Struct[0], "MOD") == 0) {
@@ -331,8 +341,7 @@ int Radio_Put_String(char *Buffer) {
  */
 int Radio_Get_String(uint8_t *Buffer, int Size) {
     int Available = Radio_available();
-    if(Available > Size)
-        Available = Size;
+    if (Available > Size) Available = Size;
     int Readable = Available;
     if (Readable <= 0) return 0;
     int Tail = RadioHandler->Tail;
@@ -340,7 +349,7 @@ int Radio_Get_String(uint8_t *Buffer, int Size) {
     if (Readable > Remain) {
         memmove(Buffer, (const void *)&RadioHandler->Buffer[Tail], Remain);
         memmove(Buffer + Remain, (const void *)RadioHandler->Buffer,
-               Readable - Remain);
+                Readable - Remain);
     } else {
         memmove(Buffer, (const void *)&RadioHandler->Buffer[Tail], Readable);
     }
@@ -417,11 +426,11 @@ void Calculate_PWM(VariRes_Value_t *ui16PWM, uint16_t *ui16Adc,
     static int Temp[4];
     static int count = 1;
     if (count < 5) {
-        for(int i = 0; i < 4; i++) {
+        for (int i = 0; i < 4; i++) {
             Temp[i] += ui16Adc[i];
         }
     } else {
-        for(int i = 0; i < 4; i++) {
+        for (int i = 0; i < 4; i++) {
             Temp[i] /= 4;
         }
         // Calculate Adc value
@@ -452,6 +461,6 @@ void Calculate_PWM(VariRes_Value_t *ui16PWM, uint16_t *ui16Adc,
         memset(Temp, 0, sizeof(uint32_t) * 4);
         count = 0;
     }
-    count ++;
+    count++;
 }
 /* Private user code ---------------------------------------------------------*/

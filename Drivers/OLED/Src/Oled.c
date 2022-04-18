@@ -31,7 +31,7 @@
 
 /* Private define ------------------------------------------------------------*/
 #define MAX_PAGE_DISPLAY 2
-#define PIN_ACTIVE 0
+#define PIN_ACTIVE 1
 /* Private macro -------------------------------------------------------------*/
 
 /* Private variables ---------------------------------------------------------*/
@@ -65,6 +65,7 @@ OLEDStatus_t Oled_Init(OLEDHandle_t *Handle) {
  */
 OLEDStatus_t Oled_Process(void) {
     char *Temp = NULL;
+    static uint8_t LiveDisplay = 0;
     Temp = malloc(64);
     // Change the page selection to display
     if (OledHandler->ControlPin.AutoChange == true) {
@@ -91,15 +92,34 @@ OLEDStatus_t Oled_Process(void) {
         ssd1306_SetCursor(15, 0);
         ssd1306_WriteString(Temp, Font_7x10, White);
         // For data
-        sprintf(Temp, "T:%05d R:%05d", dis.Joys.Thrust, dis.Joys.Roll);
+        sprintf(Temp, "R:%04.1f P:%04.1f", dis.SystemParameters.Roll,
+                dis.SystemParameters.Pitch);
         ssd1306_SetCursor(2, 20);
         ssd1306_WriteString(Temp, Font_7x10, White);
-        sprintf(Temp, "P:%05d Y:%05d", dis.Joys.Pitch, dis.Joys.Yaw);
+        sprintf(Temp, "Y:%04.1f M:%s", dis.SystemParameters.Yaw, dis.Mode);
         ssd1306_SetCursor(2, 32);
         ssd1306_WriteString(Temp, Font_7x10, White);
-        sprintf(Temp, "M:%s B:%02.1fV", dis.Mode, dis.SystemParameters.VBat);
+        sprintf(Temp, "B:%02.1fV", dis.SystemParameters.VBat);
         ssd1306_SetCursor(2, 44);
         ssd1306_WriteString(Temp, Font_7x10, White);
+        if (OledHandler->Display.RadioState == ALIVE) {
+            if (LiveDisplay % 2 == 0) {
+                sprintf(Temp, "S:LIVE");
+            } else {
+                sprintf(Temp, "S:    ");
+            }
+            LiveDisplay++;
+        } else {
+            if (LiveDisplay % 2 == 0) {
+                sprintf(Temp, "S:DEAD");
+            } else {
+                sprintf(Temp, "S:    ");
+            }
+            LiveDisplay++;
+        }
+        ssd1306_SetCursor(58, 44);
+        ssd1306_WriteString(Temp, Font_7x10, White);
+
         // Don't forget update the screen
         ssd1306_UpdateScreen();
     } else if (OledHandler->SelectPage == 2) {
@@ -121,7 +141,7 @@ OLEDStatus_t Oled_Process(void) {
         // Don't forget update the screen
         ssd1306_UpdateScreen();
     }
-    //Put the Page Processing here
+    // Put the Page Processing here
     free(Temp);
     return OLED_OK;
 }

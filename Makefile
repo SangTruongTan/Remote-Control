@@ -63,6 +63,7 @@ Drivers/Radio/Src/MY_NRF24.c \
 Drivers/OLED/Src/ssd1306_fonts.c \
 Drivers/OLED/Src/ssd1306_tests.c \
 Drivers/OLED/Src/ssd1306.c \
+Drivers/OLED/Src/Oled.c	\
 Drivers/RingBuffer/Src/uartRingBufDMA.c \
 Drivers/Radio/Src/Radio.c \
 Drivers/Radio/Src/RemoteControl.c \

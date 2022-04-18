@@ -51,7 +51,7 @@ static SPI_HandleTypeDef nrf24_hspi;
 void (*wait)(uint32_t);
 uint32_t (*getTick)();
 // Timeout of the transmission
-uint32_t Timeout = 40;
+uint32_t Timeout = 5;
 
 // Debugging UART handle
 static UART_HandleTypeDef nrf24_huart;

@@ -35,6 +35,11 @@
 /* Exported types ------------------------------------------------------------*/
 
 /* Exported constants --------------------------------------------------------*/
+typedef enum RadioState_t {
+    ALIVE = 0U,
+    DEAD = 1U,
+} RadioState_t;
+
 typedef enum OLEDStatus_t {
     OLED_OK = 0U,
     OLED_ERROR = 1U,
@@ -83,6 +88,7 @@ typedef struct OLEDDisplay_t {
     ControlPid_t Pid;
     Joystick_t Joys;
     SensorParameters_t SystemParameters;
+    RadioState_t RadioState;
 } OLEDDisplay_t;
 
 typedef struct OLEDHandle_t {
