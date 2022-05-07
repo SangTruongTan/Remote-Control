@@ -31,7 +31,7 @@
 
 /* Private define ------------------------------------------------------------*/
 #define MAX_PAGE_DISPLAY 2
-#define PIN_ACTIVE 1
+#define PIN_ACTIVE 0
 /* Private macro -------------------------------------------------------------*/
 
 /* Private variables ---------------------------------------------------------*/
@@ -78,13 +78,26 @@ OLEDStatus_t Oled_Process(void) {
         }
     }
     // Display the data rely selection display
-    if (OledHandler->SelectPage == 0) {
-        sprintf(Temp, "Display Page:%d", OledHandler->SelectPage);
+    if (OledHandler->SelectPage == 1) {
+        OLEDDisplay_t dis = OledHandler->Display;
+        sprintf(Temp, "PID1");
         ssd1306_Fill(Black);
-        ssd1306_SetCursor(2, 0);
+        ssd1306_SetCursor(55, 0);
         ssd1306_WriteString(Temp, Font_7x10, White);
+        sprintf(Temp, "R %05.2f %05.2f %05.2f", dis.Pid.Roll.P,
+                dis.Pid.Roll.I, dis.Pid.Roll.D);
+        ssd1306_SetCursor(2, 15);
+        ssd1306_WriteString(Temp, Font_6x8, White);
+        sprintf(Temp, "P %05.2f %05.2f %05.2f", dis.Pid.Pitch.P,
+                dis.Pid.Pitch.I, dis.Pid.Pitch.D);
+        ssd1306_SetCursor(2, 30);
+        ssd1306_WriteString(Temp, Font_6x8, White);
+        sprintf(Temp, "Y %05.2f %05.2f %05.2f", dis.Pid.Yaw.P,
+                dis.Pid.Yaw.I, dis.Pid.Yaw.D);
+        ssd1306_SetCursor(2, 45);
+        ssd1306_WriteString(Temp, Font_6x8, White);
         ssd1306_UpdateScreen();
-    } else if (OledHandler->SelectPage == 1) {
+    } else if (OledHandler->SelectPage == 0) {
         OLEDDisplay_t dis = OledHandler->Display;
         ssd1306_Fill(Black);
         // Title
@@ -123,22 +136,19 @@ OLEDStatus_t Oled_Process(void) {
         // Don't forget update the screen
         ssd1306_UpdateScreen();
     } else if (OledHandler->SelectPage == 2) {
-        OLEDDisplay_t dis = OledHandler->Display;
+                OLEDDisplay_t dis = OledHandler->Display;
+        sprintf(Temp, "PID2");
         ssd1306_Fill(Black);
-        // Title
-        sprintf(Temp, "Flight Control");
-        ssd1306_SetCursor(15, 0);
+        ssd1306_SetCursor(55, 0);
         ssd1306_WriteString(Temp, Font_7x10, White);
-        // For Data
-        sprintf(Temp, "R:%04.1f P:%04.1f", dis.SystemParameters.Roll,
-                dis.SystemParameters.Pitch);
-        ssd1306_SetCursor(2, 20);
-        ssd1306_WriteString(Temp, Font_7x10, White);
-        sprintf(Temp, "Y:%04.1f A:%04.1fm", dis.SystemParameters.Yaw,
-                dis.SystemParameters.Altitude);
-        ssd1306_SetCursor(2, 32);
-        ssd1306_WriteString(Temp, Font_7x10, White);
-        // Don't forget update the screen
+        sprintf(Temp, "A %05.2f %05.2f %05.2f", dis.Pid.Altitude.P,
+                dis.Pid.Altitude.I, dis.Pid.Altitude.D);
+        ssd1306_SetCursor(2, 15);
+        ssd1306_WriteString(Temp, Font_6x8, White);
+        sprintf(Temp, "G %05.2f %05.2f %05.2f", dis.Pid.Gps.P,
+                dis.Pid.Gps.I, dis.Pid.Gps.D);
+        ssd1306_SetCursor(2, 30);
+        ssd1306_WriteString(Temp, Font_6x8, White);
         ssd1306_UpdateScreen();
     }
     // Put the Page Processing here

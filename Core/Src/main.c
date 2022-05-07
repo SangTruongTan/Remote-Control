@@ -142,7 +142,9 @@ int main(void) {
     MX_USART3_UART_Init();
     MX_ADC2_Init();
     /* USER CODE BEGIN 2 */
-
+    HAL_GPIO_WritePin(Buzz_GPIO_Port, Buzz_Pin, 1);
+    HAL_Delay(200);
+    HAL_GPIO_WritePin(Buzz_GPIO_Port, Buzz_Pin, 0);
     // For RTOS
     xTaskCreate(Init_Task, "Init", 256, NULL, 3, &InitTask);
     vTaskStartScheduler();
@@ -492,10 +494,10 @@ void Init_Task(void *pvParameters) {
     Radio.AdcOffset.Adc4 = 1961;
     // Varires_Calib(&Radio.AdcOffset, ADCValue, 100);
     // Init for OLED Display
-    Oled.ControlPin.Pin = BTN2_LCD_Pin;
-    Oled.ControlPin.Port = BTN2_LCD_GPIO_Port;
+    Oled.Init.ControlPin.Pin = BTN1_LCD_Pin;
+    Oled.Init.ControlPin.Port = BTN1_LCD_GPIO_Port;
     Oled.Init.ControlPin.AutoChange = false;
-    Oled.Init.SelectPage = 1;
+    Oled.Init.SelectPage = 0;
     Oled.Init.GetTime = xTaskGetTickCount;
     Oled.Init.Wait = vTaskDelay;
     Oled_Init(&Oled);
@@ -513,17 +515,31 @@ void Display_Task(void *pvParameters) {
     for (;;) {
         Oled_Process();
         vTaskDelayUntil(&StartTask, 200);
-        printf("Hello worlds\r\n");
     }
 }
 
 void Radio_Task(void *pvParameters) {
+    char Buffer[64];
     TickType_t StartTask = xTaskGetTickCount();
     char Data[50];
+    uint8_t count = 0;
     for (;;) {
-        sprintf(Data, "CMD,T,%d,R,%d,P,%d,Y,%d\n", Radio.PWMValue.Adc3,
+        memset(Buffer, '\0', 64);
+        if(Get_String_NonBlocking(&Ring.Ring1, (uint8_t *)Buffer, '\n') > 0) {
+            strcpy(Data, Buffer);
+            Data[strlen((char *)Data)] = '\n';
+        } else {
+            sprintf(Data, "CMD,T,%d,R,%d,P,%d,Y,%d\n", Radio.PWMValue.Adc3,
                 Radio.PWMValue.Adc2, Radio.PWMValue.Adc1, Radio.PWMValue.Adc4);
-        if (Radio_Remain() > strlen(Data)) Radio_Put_String(Data);
+        }
+        if(count == 0) {
+            if (Radio_Remain() > strlen(Data)) Radio_Put_String(Data);
+        }
+        if(count != 0) {
+            count ++;
+        } else if (count > 5) {
+            count  = 0;
+        }
         Radio_Process();
         vTaskDelayUntil(&StartTask, 10);
     }

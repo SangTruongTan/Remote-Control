@@ -113,9 +113,9 @@ RadioStatus_t Radio_Process() {
             count = 0;
             RadioHandler->Display->RadioState = ALIVE;
         } else {
-            count ++;
+            count++;
         }
-        if(count > 50) {
+        if (count > 50) {
             count = 50;
             RadioHandler->Display->RadioState = DEAD;
         }
@@ -143,6 +143,9 @@ void Radio_Process_From_FC(uint8_t *Buffer) {
             Radio_Decode_Mode(Struct);
         } else if (strcmp((const char *)&Struct[0], "ACK") == 0) {
             Radio_Decode_Ack(Struct);
+        } else if (strcmp((const char *)&Struct[0], "PID") == 0) {
+            Radio_Decode_PID(Struct);
+            printf("ACK\r\n");
         }
     }
 }
@@ -458,6 +461,9 @@ void Calculate_PWM(VariRes_Value_t *ui16PWM, uint16_t *ui16Adc,
             ui16PWM->Adc4 = 1000;
         else if (ui16PWM->Adc4 > 2000)
             ui16PWM->Adc4 = 2000;
+        //Standardize the Joystick
+        ui16PWM->Adc2 = -ui16PWM->Adc2  + 3000;
+        ui16PWM->Adc1 = -ui16PWM->Adc1  + 3000;
         memset(Temp, 0, sizeof(uint32_t) * 4);
         count = 0;
     }
