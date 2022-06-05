@@ -74,6 +74,8 @@ typedef struct RadioHandler_t {
     int Head;
     int Tail;
     uint8_t Buffer[RADIO_CIRCULAR_BUFFER_SIZE];
+    char Heading;
+    uint8_t LostPackages;
 } RadioHandler_t;
 
 /* Exported constants --------------------------------------------------------*/

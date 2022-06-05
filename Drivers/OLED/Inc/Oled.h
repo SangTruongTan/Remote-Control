@@ -56,6 +56,8 @@ typedef struct OLEDInit_t {
     uint32_t (*GetTime)();
     OLEDControlPin_t ControlPin;
     int SelectPage;
+    char *Heading;
+    uint8_t *LostPackages;
 } OLEDInit_t;
 
 typedef struct Gpstime_t {
@@ -97,6 +99,8 @@ typedef struct OLEDHandle_t {
     int SelectPage;
     OLEDDisplay_t Display;
     OLEDControlPin_t ControlPin;
+    char *Heading;
+    uint8_t *LostPackages;
 } OLEDHandle_t;
 
 /* Exported macro ------------------------------------------------------------*/

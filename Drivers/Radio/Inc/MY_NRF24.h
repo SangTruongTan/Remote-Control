@@ -70,6 +70,7 @@ typedef struct NRF24_Init_t {
     void (*wait)(uint32_t);
     uint32_t (*getTick)();
     uint32_t Timeout;
+    uint8_t *LostPackages;
 } NRF24_Init_t;
 
 //**** Functions prototypes ****//

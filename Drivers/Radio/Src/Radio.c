@@ -314,7 +314,7 @@ int Radio_Put_String(char *Buffer) {
         Remain += RADIO_CIRCULAR_BUFFER_SIZE;
     }
     // Check whether the messsage exceeds the remaining size.
-    if (Head + StringLength > RADIO_CIRCULAR_BUFFER_SIZE) {
+    if (Head + StringLength >= RADIO_CIRCULAR_BUFFER_SIZE) {
         uint16_t DataToCopy = RADIO_CIRCULAR_BUFFER_SIZE - Head;
         memcpy((RadioHandler->Buffer + Head), Buffer, DataToCopy);
         Head = 0;
@@ -327,6 +327,9 @@ int Radio_Put_String(char *Buffer) {
     }
     if (StringLength >= Remain) {
         RadioHandler->Tail = RadioHandler->Head + 1;
+        if(RadioHandler->Tail >= RADIO_CIRCULAR_BUFFER_SIZE) {
+            RadioHandler->Tail = 0;
+        }
     }
     // Calculate remaining again
     Remain = RadioHandler->Tail - RadioHandler->Head;

@@ -482,6 +482,7 @@ void Init_Task(void *pvParameters) {
     Radio.Init.nrfInit.Timeout = 0;
     Radio.Init.nrfInit.wait = vTaskDelay;
     Radio.Init.nrfInit.hspi = &hspi3;
+    Radio.Init.nrfInit.LostPackages = &Radio.LostPackages;
     Radio.Init.Serial = &Ring.Ring1;
     Radio.Init.Display = &Oled.Display;
     Radio.Init.ADCValue = ADCValue;
@@ -500,6 +501,8 @@ void Init_Task(void *pvParameters) {
     Oled.Init.SelectPage = 0;
     Oled.Init.GetTime = xTaskGetTickCount;
     Oled.Init.Wait = vTaskDelay;
+    Oled.Init.Heading = &Radio.Heading;
+    Oled.Init.LostPackages = &Radio.LostPackages;
     Oled_Init(&Oled);
     xTaskCreate(Display_Task, "Display", 512, NULL, 2, &DisplayTask);
     xTaskCreate(Radio_Task, "Radio", 1024, NULL, 2, &RadioTask);
@@ -514,6 +517,7 @@ void Display_Task(void *pvParameters) {
     vTaskDelay(1000);
     for (;;) {
         Oled_Process();
+        // printf("Lost:%d\r\n", Radio.LostPackages);
         vTaskDelayUntil(&StartTask, 200);
     }
 }
@@ -524,21 +528,29 @@ void Radio_Task(void *pvParameters) {
     char Data[50];
     uint8_t count = 0;
     for (;;) {
+        // Read the button status
+        if (HAL_GPIO_ReadPin(SW_RIGHT_GPIO_Port, SW_RIGHT_Pin) ==
+            GPIO_PIN_SET) {
+            Radio.Heading = 'T';
+        } else {
+            Radio.Heading = 'F';
+        }
         memset(Buffer, '\0', 64);
-        if(Get_String_NonBlocking(&Ring.Ring1, (uint8_t *)Buffer, '\n') > 0) {
+        if (Get_String_NonBlocking(&Ring.Ring1, (uint8_t *)Buffer, '\n') > 0) {
             strcpy(Data, Buffer);
             Data[strlen((char *)Data)] = '\n';
         } else {
-            sprintf(Data, "CMD,T,%d,R,%d,P,%d,Y,%d\n", Radio.PWMValue.Adc3,
-                Radio.PWMValue.Adc2, Radio.PWMValue.Adc1, Radio.PWMValue.Adc4);
+            sprintf(Data, "CMD,T,%d,R,%d,P,%d,Y,%d,H,%c\n", Radio.PWMValue.Adc3,
+                    Radio.PWMValue.Adc2, Radio.PWMValue.Adc1,
+                    Radio.PWMValue.Adc4, Radio.Heading);
         }
-        if(count == 0) {
+        if (count == 0) {
             if (Radio_Remain() > strlen(Data)) Radio_Put_String(Data);
         }
-        if(count != 0) {
-            count ++;
+        if (count != 0) {
+            count++;
         } else if (count > 5) {
-            count  = 0;
+            count = 0;
         }
         Radio_Process();
         vTaskDelayUntil(&StartTask, 10);

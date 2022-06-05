@@ -50,8 +50,9 @@ static SPI_HandleTypeDef nrf24_hspi;
 // Wait and GetTick Function
 void (*wait)(uint32_t);
 uint32_t (*getTick)();
+uint8_t *LostPackages;
 // Timeout of the transmission
-uint32_t Timeout = 5;
+uint32_t Timeout = 7;
 
 // Debugging UART handle
 static UART_HandleTypeDef nrf24_huart;
@@ -177,6 +178,7 @@ void NRF24_begin(NRF24_Init_t Init) {
     uint16_t nrfCE_Pin = Init.CE_Pin;
     wait = Init.wait;
     getTick = Init.getTick;
+    LostPackages = Init.LostPackages;
     if (Init.Timeout != 0) {
         Timeout = Init.Timeout;
     }
@@ -298,6 +300,7 @@ bool NRF24_write(const void *buf, uint8_t len) {
     const uint32_t timeout = Timeout;  // ms to wait for timeout
     do {
         NRF24_read_registerN(REG_OBSERVE_TX, &observe_tx, 1);
+        *LostPackages = (observe_tx & 0xF0) >> 4;
         // Get status register
         status = NRF24_get_status();
     } while (!(status & (_BV(BIT_TX_DS) | _BV(BIT_MAX_RT))) &&
